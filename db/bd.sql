@@ -383,9 +383,13 @@ JOIN
     profesor prof ON asist.profesor_id = prof.id
 JOIN 
     persona pp ON prof.persona_id = pp.id;
+-- Eliminar el procedimiento si ya existe
+DROP PROCEDURE IF EXISTS verificar_correlatividades;
 
--- Procedimiento almacenado para verificar correlatividades
+-- Definir el nuevo delimitador
 DELIMITER //
+
+-- Crear el procedimiento
 CREATE PROCEDURE verificar_correlatividades(
     IN p_alumno_id INT,
     IN p_materia_id INT,
@@ -440,14 +444,38 @@ BEGIN
             
         SET p_puede_cursar = FALSE;
         SET p_mensaje = CONCAT('Falta regularizar: ', v_correlativas_faltantes);
-        SELECT p_puede_cursar, p_mensaje;
-        RETURN;
-    END IF;
-    
-    -- Verificar correlatividades para cursar acreditadas
-    SELECT 
-        NOT EXISTS (
-            SELECT 1
+        -- Eliminar este SELECT que podría causar problemas
+        -- SELECT p_puede_cursar, p_mensaje;
+        -- No usar RETURN aquí
+    ELSE
+        -- Verificar correlatividades para cursar acreditadas
+        SELECT 
+            NOT EXISTS (
+                SELECT 1
+                FROM correlatividad c
+                JOIN materia m ON c.materia_correlativa_id = m.id
+                LEFT JOIN (
+                    SELECT 
+                        e.inscripcion_cursado_id,
+                        ic.materia_id
+                    FROM 
+                        evaluacion e
+                    JOIN 
+                        inscripcion_cursado ic ON e.inscripcion_cursado_id = ic.id
+                    WHERE 
+                        ic.alumno_id = p_alumno_id
+                        AND e.tipo = 'Final'
+                        AND e.nota >= 4
+                ) ea ON c.materia_correlativa_id = ea.materia_id
+                WHERE 
+                    c.materia_id = p_materia_id
+                    AND c.tipo = 'Para cursar acreditada'
+                    AND ea.materia_id IS NULL
+            ) INTO v_cumple_requisitos;
+        
+        IF NOT v_cumple_requisitos THEN
+            SELECT GROUP_CONCAT(m.nombre SEPARATOR ', ')
+            INTO v_correlativas_faltantes
             FROM correlatividad c
             JOIN materia m ON c.materia_correlativa_id = m.id
             LEFT JOIN (
@@ -466,45 +494,25 @@ BEGIN
             WHERE 
                 c.materia_id = p_materia_id
                 AND c.tipo = 'Para cursar acreditada'
-                AND ea.materia_id IS NULL
-        ) INTO v_cumple_requisitos;
-    
-    IF NOT v_cumple_requisitos THEN
-        SELECT GROUP_CONCAT(m.nombre SEPARATOR ', ')
-        INTO v_correlativas_faltantes
-        FROM correlatividad c
-        JOIN materia m ON c.materia_correlativa_id = m.id
-        LEFT JOIN (
-            SELECT 
-                e.inscripcion_cursado_id,
-                ic.materia_id
-            FROM 
-                evaluacion e
-            JOIN 
-                inscripcion_cursado ic ON e.inscripcion_cursado_id = ic.id
-            WHERE 
-                ic.alumno_id = p_alumno_id
-                AND e.tipo = 'Final'
-                AND e.nota >= 4
-        ) ea ON c.materia_correlativa_id = ea.materia_id
-        WHERE 
-            c.materia_id = p_materia_id
-            AND c.tipo = 'Para cursar acreditada'
-            AND ea.materia_id IS NULL;
-            
-        SET p_puede_cursar = FALSE;
-        SET p_mensaje = CONCAT('Falta acreditar: ', v_correlativas_faltantes);
-        SELECT p_puede_cursar, p_mensaje;
-        RETURN;
+                AND ea.materia_id IS NULL;
+                
+            SET p_puede_cursar = FALSE;
+            SET p_mensaje = CONCAT('Falta acreditar: ', v_correlativas_faltantes);
+            -- Eliminar este SELECT
+            -- SELECT p_puede_cursar, p_mensaje;
+        ELSE
+            SET p_puede_cursar = TRUE;
+            SET p_mensaje = 'Cumple con todas las correlatividades';
+        END IF;
     END IF;
     
-    SET p_puede_cursar = TRUE;
-    SET p_mensaje = 'Cumple con todas las correlatividades';
-    SELECT p_puede_cursar, p_mensaje;
+    -- Esta línea es opcional: mostrar el resultado dentro del procedimiento
+    -- pero puede causar problemas si se usa como subquery
+    -- SELECT p_puede_cursar AS puede_cursar, p_mensaje AS mensaje;
 END //
-DELIMITER ;
 
--- Trigger para auditoría de cambios en evaluaciones
+-- Restaurar el delimitador predeterminado
+DELIMITER ;-- Trigger para auditoría de cambios en evaluaciones
 DELIMITER //
 CREATE TRIGGER audit_evaluacion_update 
 AFTER UPDATE ON evaluacion
