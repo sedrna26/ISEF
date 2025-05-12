@@ -25,6 +25,12 @@ if ($tipo_usuario === 'profesor') {
     ");
     $profesor = $profesor_res->fetch_assoc();
     $profesor_id = $profesor ? $profesor['profesor_id'] : null;
+} else {
+    // Si es preceptor, obtener un profesor_id válido (el primero disponible)
+    // Esto es una solución provisional para evitar errores de restricción de clave foránea
+    $profesor_res = $mysqli->query("SELECT id FROM profesor LIMIT 1");
+    $profesor = $profesor_res->fetch_assoc();
+    $profesor_id = $profesor ? $profesor['id'] : null;
 }
 
 // 2️⃣ Procesar POST (registro individual y en lote)
@@ -44,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fecha = $_POST['fecha'];
         foreach ($_POST['estado'] as $inscripcion_cursado_id => $estado) {
             if ($estado) {  // solo si seleccionaron un estado
-                $stmt = $mysqli->prepare("INSERT INTO asistencia (inscripcion_cursado_id, fecha, estado, profesor_id) VALUES (?, ?, ?, NULL)");
-                $stmt->bind_param("iss", $inscripcion_cursado_id, $fecha, $estado);
+                $stmt = $mysqli->prepare("INSERT INTO asistencia (inscripcion_cursado_id, fecha, estado, profesor_id) VALUES (?, ?, ?, ?)");
+                $stmt->bind_param("issi", $inscripcion_cursado_id, $fecha, $estado, $profesor_id);
                 $stmt->execute();
                 $stmt->close();
             }

@@ -14,12 +14,21 @@ if ($mysqli->connect_errno) {
 // Procesar asignación/eliminación
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($_POST['accion'] === 'asignar') {
-        $stmt = $mysqli->prepare("INSERT INTO profesor_materia_curso (profesor_id, materia_id, curso_id, fecha_desde) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("iiis", $_POST['profesor_id'], $_POST['materia_id'], $_POST['curso_id'], $_POST['fecha_desde']);
+        // Obtener el ciclo lectivo del curso seleccionado
+        $stmt = $mysqli->prepare("SELECT ciclo_lectivo FROM curso WHERE id = ?");
+        $stmt->bind_param("i", $_POST['curso_id']);
+        $stmt->execute();
+        $stmt->bind_result($ciclo_lectivo);
+        $stmt->fetch();
+        $stmt->close();
+        
+        // Realizar la asignación
+        $stmt = $mysqli->prepare("INSERT INTO profesor_materia (profesor_id, materia_id, curso_id, ciclo_lectivo) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("iiii", $_POST['profesor_id'], $_POST['materia_id'], $_POST['curso_id'], $ciclo_lectivo);
         $stmt->execute();
         $stmt->close();
     } elseif ($_POST['accion'] === 'eliminar') {
-        $stmt = $mysqli->prepare("DELETE FROM profesor_materia_curso WHERE id = ?");
+        $stmt = $mysqli->prepare("DELETE FROM profesor_materia WHERE id = ?");
         $stmt->bind_param("i", $_POST['asignacion_id']);
         $stmt->execute();
         $stmt->close();
@@ -30,21 +39,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Obtener datos necesarios
 $asignaciones = $mysqli->query("
-    SELECT pmc.id as asignacion_id, 
+    SELECT pm.id as asignacion_id, 
            p.apellidos, p.nombres, 
            m.nombre as materia_nombre, 
            c.codigo as curso_codigo, c.division, 
-           pmc.fecha_desde
-    FROM profesor_materia_curso pmc
-    JOIN vista_profesores p ON pmc.profesor_id = p.profesor_id
-    JOIN materia m ON pmc.materia_id = m.id
-    JOIN curso c ON pmc.curso_id = c.id
+           pm.ciclo_lectivo
+    FROM profesor_materia pm
+    JOIN vista_profesores p ON pm.profesor_id = p.profesor_id
+    JOIN materia m ON pm.materia_id = m.id
+    JOIN curso c ON pm.curso_id = c.id
     ORDER BY p.apellidos, p.nombres, m.nombre
 ");
 
 $profesores = $mysqli->query("SELECT profesor_id, apellidos, nombres FROM vista_profesores ORDER BY apellidos, nombres");
 $materias = $mysqli->query("SELECT id, nombre FROM materia ORDER BY nombre");
-$cursos = $mysqli->query("SELECT id, codigo, division FROM curso ORDER BY codigo, division");
+$cursos = $mysqli->query("SELECT id, codigo, division, ciclo_lectivo FROM curso ORDER BY codigo, division");
 ?>
 
 <!DOCTYPE html>
@@ -91,13 +100,11 @@ $cursos = $mysqli->query("SELECT id, codigo, division FROM curso ORDER BY codigo
                 <option value="">-- Seleccione Curso --</option>
                 <?php while ($c = $cursos->fetch_assoc()): ?>
                     <option value="<?= $c['id'] ?>">
-                        <?= htmlspecialchars($c['codigo'] . ' - ' . $c['division']) ?>
+                        <?= htmlspecialchars($c['codigo'] . ' - ' . $c['division'] . ' (' . $c['ciclo_lectivo'] . ')') ?>
                     </option>
                 <?php endwhile; ?>
             </select>
         </label><br>
-        
-        <label>Fecha de inicio: <input type="date" name="fecha_desde" required></label><br>
         
         <button type="submit">Asignar Profesor</button>
     </form>
@@ -109,7 +116,7 @@ $cursos = $mysqli->query("SELECT id, codigo, division FROM curso ORDER BY codigo
                 <th>Profesor</th>
                 <th>Materia</th>
                 <th>Curso</th>
-                <th>Desde</th>
+                <th>Ciclo Lectivo</th>
                 <th>Acciones</th>
             </tr>
         </thead>
@@ -119,7 +126,7 @@ $cursos = $mysqli->query("SELECT id, codigo, division FROM curso ORDER BY codigo
                     <td><?= htmlspecialchars($a['apellidos'] . ', ' . $a['nombres']) ?></td>
                     <td><?= htmlspecialchars($a['materia_nombre']) ?></td>
                     <td><?= htmlspecialchars($a['curso_codigo'] . ' - ' . $a['division']) ?></td>
-                    <td><?= htmlspecialchars($a['fecha_desde']) ?></td>
+                    <td><?= htmlspecialchars($a['ciclo_lectivo']) ?></td>
                     <td>
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="accion" value="eliminar">
