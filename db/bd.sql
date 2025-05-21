@@ -1,402 +1,31 @@
--- Script de creación de Base de Datos para el Sistema de Gestión Académica
--- Instituto Superior de Educación Física
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Servidor: 127.0.0.1
+-- Tiempo de generación: 22-05-2025 a las 00:13:26
+-- Versión del servidor: 10.4.32-MariaDB
+-- Versión de PHP: 8.2.12
 
--- Eliminar base de datos si existe (para desarrollo)
--- DROP DATABASE IF EXISTS isef_sistema;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
--- Crear base de datos
-CREATE DATABASE isef_sistema CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE isef_sistema;
 
--- Tabla de usuarios
-CREATE TABLE usuario (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL, -- Almacenado con hash
-    tipo ENUM('administrador', 'preceptor', 'profesor', 'alumno') NOT NULL,
-    ultimo_acceso DATETIME,
-    activo BOOLEAN DEFAULT TRUE,
-    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_username (username),
-    INDEX idx_tipo (tipo)
-);
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- Tabla de personas (información común)
-CREATE TABLE persona (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT NOT NULL,
-    apellidos VARCHAR(100) NOT NULL,
-    nombres VARCHAR(100) NOT NULL,
-    dni VARCHAR(15) NOT NULL UNIQUE,
-    fecha_nacimiento DATE NOT NULL,
-    celular VARCHAR(20),
-    domicilio VARCHAR(255),
-    contacto_emergencia VARCHAR(255),
-    foto_url VARCHAR(255),
-    FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE CASCADE,
-    INDEX idx_dni (dni),
-    INDEX idx_apellidos_nombres (apellidos, nombres)
-);
+--
+-- Base de datos: `isef_sistema`
+--
 
--- Tabla de profesores
-CREATE TABLE profesor (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    persona_id INT NOT NULL UNIQUE,
-    titulo_profesional VARCHAR(255) NOT NULL,
-    fecha_ingreso DATE NOT NULL,
-    horas_consulta VARCHAR(255),
-    FOREIGN KEY (persona_id) REFERENCES persona(id) ON DELETE CASCADE
-);
-
--- Tabla de alumnos
-CREATE TABLE alumno (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    persona_id INT NOT NULL UNIQUE,
-    legajo VARCHAR(20) NOT NULL UNIQUE,
-    fecha_ingreso DATE NOT NULL,
-    cohorte INT NOT NULL,
-    FOREIGN KEY (persona_id) REFERENCES persona(id) ON DELETE CASCADE,
-    INDEX idx_legajo (legajo),
-    INDEX idx_cohorte (cohorte)
-);
-
--- Tabla de cursos
-CREATE TABLE curso (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    codigo VARCHAR(10) NOT NULL,
-    division VARCHAR(5) NOT NULL,
-    anio VARCHAR(5) NOT NULL,
-    turno ENUM('Mañana', 'Tarde') NOT NULL,
-    ciclo_lectivo INT NOT NULL,
-    UNIQUE KEY uk_curso_completo (codigo, division, ciclo_lectivo),
-    INDEX idx_turno (turno),
-    INDEX idx_ciclo_lectivo (ciclo_lectivo)
-);
-
--- Tabla de materias
-CREATE TABLE materia (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nro_orden INT NOT NULL,
-    codigo VARCHAR(20) NOT NULL,
-    nombre VARCHAR(255) NOT NULL,
-    tipo ENUM('Cuatrimestral', 'Anual') NOT NULL,
-    anio INT NOT NULL,
-    cuatrimestre ENUM('1°', '2°', 'Anual') NOT NULL,
-    UNIQUE KEY uk_materia_codigo (codigo),
-    INDEX idx_nro_orden (nro_orden),
-    INDEX idx_anio_cuatrimestre (anio, cuatrimestre)
-);
-
--- Tabla de correlatividades
-CREATE TABLE correlatividad (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    materia_id INT NOT NULL,
-    materia_correlativa_id INT NOT NULL,
-    tipo ENUM('Para cursar regularizada', 'Para cursar acreditada', 'Para acreditar') NOT NULL,
-    FOREIGN KEY (materia_id) REFERENCES materia(id) ON DELETE CASCADE,
-    FOREIGN KEY (materia_correlativa_id) REFERENCES materia(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_correlatividad (materia_id, materia_correlativa_id, tipo),
-    INDEX idx_tipo_correlatividad (tipo)
-);
-
--- Tabla de asignación profesor-materia-curso
-CREATE TABLE profesor_materia (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    profesor_id INT NOT NULL,
-    materia_id INT NOT NULL,
-    curso_id INT NOT NULL,
-    ciclo_lectivo INT NOT NULL,
-    FOREIGN KEY (profesor_id) REFERENCES profesor(id) ON DELETE CASCADE,
-    FOREIGN KEY (materia_id) REFERENCES materia(id) ON DELETE CASCADE,
-    FOREIGN KEY (curso_id) REFERENCES curso(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_profesor_materia_curso (profesor_id, materia_id, curso_id, ciclo_lectivo),
-    INDEX idx_ciclo_lectivo (ciclo_lectivo)
-);
-
--- Tabla de inscripciones a cursado
-CREATE TABLE inscripcion_cursado (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    alumno_id INT NOT NULL,
-    materia_id INT NOT NULL,
-    curso_id INT NOT NULL,
-    ciclo_lectivo INT NOT NULL,
-    fecha_inscripcion DATE NOT NULL,
-    estado ENUM('Regular', 'Libre', 'Promocional') DEFAULT 'Regular',
-    FOREIGN KEY (alumno_id) REFERENCES alumno(id) ON DELETE CASCADE,
-    FOREIGN KEY (materia_id) REFERENCES materia(id) ON DELETE CASCADE,
-    FOREIGN KEY (curso_id) REFERENCES curso(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_inscripcion_cursado (alumno_id, materia_id, curso_id, ciclo_lectivo),
-    INDEX idx_estado (estado),
-    INDEX idx_ciclo_lectivo (ciclo_lectivo)
-);
-
--- Tabla de asistencias
-CREATE TABLE asistencia (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    inscripcion_cursado_id INT NOT NULL,
-    fecha DATE NOT NULL,
-    estado ENUM('Presente', 'Ausente', 'Justificado') NOT NULL,
-    profesor_id INT NOT NULL,
-    FOREIGN KEY (inscripcion_cursado_id) REFERENCES inscripcion_cursado(id) ON DELETE CASCADE,
-    FOREIGN KEY (profesor_id) REFERENCES profesor(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_asistencia (inscripcion_cursado_id, fecha),
-    INDEX idx_fecha (fecha),
-    INDEX idx_estado (estado)
-);
-
--- Tabla de evaluaciones
-CREATE TABLE evaluacion (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    inscripcion_cursado_id INT NOT NULL,
-    tipo ENUM('Parcial', 'Final', 'Coloquio') NOT NULL,
-    instancia ENUM('1°Cuatrimestre', '2°Cuatrimestre', 'Anual') NOT NULL,
-    fecha DATE NOT NULL,
-    nota INT,
-    nota_letra VARCHAR(50),
-    profesor_id INT NOT NULL,
-    observaciones TEXT,
-    FOREIGN KEY (inscripcion_cursado_id) REFERENCES inscripcion_cursado(id) ON DELETE CASCADE,
-    FOREIGN KEY (profesor_id) REFERENCES profesor(id) ON DELETE CASCADE,
-    INDEX idx_tipo_instancia (tipo, instancia),
-    INDEX idx_fecha (fecha)
-);
-
--- Tabla de actas de examen
-CREATE TABLE acta_examen (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    materia_id INT NOT NULL,
-    curso_id INT NOT NULL,
-    fecha DATE NOT NULL,
-    tipo ENUM('1°Cuatrimestre', '2°Cuatrimestre', 'Anual') NOT NULL,
-    libro INT,
-    folio INT,
-    profesor_id INT NOT NULL,
-    cerrada BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (materia_id) REFERENCES materia(id) ON DELETE CASCADE,
-    FOREIGN KEY (curso_id) REFERENCES curso(id) ON DELETE CASCADE,
-    FOREIGN KEY (profesor_id) REFERENCES profesor(id) ON DELETE CASCADE,
-    INDEX idx_fecha (fecha),
-    INDEX idx_libro_folio (libro, folio),
-    INDEX idx_cerrada (cerrada)
-);
-
--- Tabla de inscripciones a exámenes
-CREATE TABLE inscripcion_examen (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    alumno_id INT NOT NULL,
-    acta_examen_id INT NOT NULL,
-    fecha_inscripcion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    estado ENUM('Inscripto', 'Presente', 'Ausente') DEFAULT 'Inscripto',
-    FOREIGN KEY (alumno_id) REFERENCES alumno(id) ON DELETE CASCADE,
-    FOREIGN KEY (acta_examen_id) REFERENCES acta_examen(id) ON DELETE CASCADE,
-    UNIQUE KEY uk_inscripcion_examen (alumno_id, acta_examen_id),
-    INDEX idx_estado (estado),
-    INDEX idx_fecha_inscripcion (fecha_inscripcion)
-);
-
--- Tabla de certificaciones
-CREATE TABLE certificacion (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    alumno_id INT NOT NULL,
-    fecha_emision DATE NOT NULL,
-    tipo ENUM('Alumno Regular', 'Analítico Parcial', 'Otro') NOT NULL,
-    codigo_verificacion VARCHAR(50) UNIQUE,
-    autorizado_por INT NOT NULL,
-    FOREIGN KEY (alumno_id) REFERENCES alumno(id) ON DELETE CASCADE,
-    FOREIGN KEY (autorizado_por) REFERENCES usuario(id) ON DELETE CASCADE,
-    INDEX idx_fecha_emision (fecha_emision),
-    INDEX idx_tipo (tipo)
-);
-
--- Tabla de auditoría
-CREATE TABLE auditoria (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT,
-    fecha_hora DATETIME DEFAULT CURRENT_TIMESTAMP,
-    tipo_operacion VARCHAR(20) NOT NULL,
-    tabla_afectada VARCHAR(50) NOT NULL,
-    registro_afectado VARCHAR(50) NOT NULL,
-    valor_anterior TEXT,
-    valor_nuevo TEXT,
-    ip_origen VARCHAR(50),
-    FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE SET NULL,
-    INDEX idx_fecha_hora (fecha_hora),
-    INDEX idx_tipo_operacion (tipo_operacion),
-    INDEX idx_tabla_afectada (tabla_afectada)
-);
-
--- Tabla de licencias de profesores
-CREATE TABLE licencia_profesor (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    profesor_id INT NOT NULL,
-    fecha_inicio DATE NOT NULL,
-    fecha_fin DATE NOT NULL,
-    tipo ENUM('Enfermedad', 'Particular', 'Otro') NOT NULL,
-    observaciones TEXT,
-    FOREIGN KEY (profesor_id) REFERENCES profesor(id) ON DELETE CASCADE,
-    INDEX idx_fecha_inicio_fin (fecha_inicio, fecha_fin),
-    INDEX idx_tipo (tipo)
-);
-
--- Insertar usuarios de prueba (sólo para desarrollo)
-INSERT INTO usuario (username, password, tipo) VALUES 
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'administrador'), -- password: password
-('preceptor', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'preceptor'),
-('profesor', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'profesor'),
-('alumno', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'alumno');
-
--- Creación de vistas útiles
-
--- Vista para mostrar información completa de personas
-CREATE VIEW vista_personas AS
-SELECT 
-    p.id,
-    p.dni,
-    p.apellidos,
-    p.nombres,
-    p.fecha_nacimiento,
-    p.celular,
-    p.domicilio,
-    p.contacto_emergencia,
-    u.username,
-    u.tipo,
-    u.activo
-FROM 
-    persona p
-JOIN 
-    usuario u ON p.usuario_id = u.id;
-
--- Vista para mostrar información completa de profesores
-CREATE VIEW vista_profesores AS
-SELECT 
-    p.id AS profesor_id,
-    pers.apellidos,
-    pers.nombres,
-    pers.dni,
-    p.titulo_profesional,
-    p.fecha_ingreso,
-    p.horas_consulta,
-    pers.celular,
-    pers.domicilio,
-    pers.contacto_emergencia,
-    u.username,
-    u.activo
-FROM 
-    profesor p
-JOIN 
-    persona pers ON p.persona_id = pers.id
-JOIN 
-    usuario u ON pers.usuario_id = u.id;
-
--- Vista para mostrar información completa de alumnos
-CREATE VIEW vista_alumnos AS
-SELECT 
-    a.id AS alumno_id,
-    pers.apellidos,
-    pers.nombres,
-    pers.dni,
-    a.legajo,
-    a.fecha_ingreso,
-    a.cohorte,
-    pers.fecha_nacimiento,
-    pers.celular,
-    pers.domicilio,
-    pers.contacto_emergencia,
-    u.username,
-    u.activo
-FROM 
-    alumno a
-JOIN 
-    persona pers ON a.persona_id = pers.id
-JOIN 
-    usuario u ON pers.usuario_id = u.id;
-
--- Vista para mostrar asignaturas con sus correlatividades
-CREATE VIEW vista_correlatividades AS
-SELECT 
-    m.id AS materia_id,
-    m.nro_orden,
-    m.codigo,
-    m.nombre AS materia_nombre,
-    m.tipo,
-    m.anio,
-    m.cuatrimestre,
-    mc.codigo AS correlativa_codigo,
-    mc.nombre AS correlativa_nombre,
-    c.tipo AS tipo_correlatividad
-FROM 
-    materia m
-LEFT JOIN 
-    correlatividad c ON m.id = c.materia_id
-LEFT JOIN 
-    materia mc ON c.materia_correlativa_id = mc.id;
-
--- Vista para mostrar situación académica del alumno
-CREATE VIEW vista_situacion_academica AS
-SELECT 
-    a.id AS alumno_id,
-    a.legajo,
-    CONCAT(p.apellidos, ', ', p.nombres) AS alumno_nombre,
-    m.nro_orden,
-    m.codigo AS materia_codigo,
-    m.nombre AS materia_nombre,
-    ic.estado,
-    c.codigo AS curso_codigo,
-    c.ciclo_lectivo,
-    (SELECT MAX(nota) FROM evaluacion e WHERE e.inscripcion_cursado_id = ic.id AND e.tipo = 'Final') AS nota_final
-FROM 
-    alumno a
-JOIN 
-    persona p ON a.persona_id = p.id
-JOIN 
-    inscripcion_cursado ic ON a.id = ic.alumno_id
-JOIN 
-    materia m ON ic.materia_id = m.id
-JOIN 
-    curso c ON ic.curso_id = c.id;
-
--- Vista para asistencia de alumnos
-CREATE VIEW vista_asistencia AS
-SELECT 
-    a.legajo,
-    CONCAT(p.apellidos, ', ', p.nombres) AS alumno_nombre,
-    m.codigo AS materia_codigo,
-    m.nombre AS materia_nombre,
-    c.codigo AS curso_codigo,
-    c.ciclo_lectivo,
-    asist.fecha,
-    asist.estado,
-    CONCAT(pp.apellidos, ', ', pp.nombres) AS profesor_nombre
-FROM 
-    asistencia asist
-JOIN 
-    inscripcion_cursado ic ON asist.inscripcion_cursado_id = ic.id
-JOIN 
-    alumno a ON ic.alumno_id = a.id
-JOIN 
-    persona p ON a.persona_id = p.id
-JOIN 
-    materia m ON ic.materia_id = m.id
-JOIN 
-    curso c ON ic.curso_id = c.id
-JOIN 
-    profesor prof ON asist.profesor_id = prof.id
-JOIN 
-    persona pp ON prof.persona_id = pp.id;
--- Eliminar el procedimiento si ya existe
-DROP PROCEDURE IF EXISTS verificar_correlatividades;
-
--- Definir el nuevo delimitador
-DELIMITER //
-
--- Crear el procedimiento
-CREATE PROCEDURE verificar_correlatividades(
-    IN p_alumno_id INT,
-    IN p_materia_id INT,
-    OUT p_puede_cursar BOOLEAN,
-    OUT p_mensaje VARCHAR(255)
-)
-BEGIN
+DELIMITER $$
+--
+-- Procedimientos
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `verificar_correlatividades` (IN `p_alumno_id` INT, IN `p_materia_id` INT, OUT `p_puede_cursar` BOOLEAN, OUT `p_mensaje` VARCHAR(255))   BEGIN
     DECLARE v_cumple_requisitos BOOLEAN DEFAULT TRUE;
     DECLARE v_correlativas_faltantes VARCHAR(255) DEFAULT '';
     
@@ -509,41 +138,236 @@ BEGIN
     -- Esta línea es opcional: mostrar el resultado dentro del procedimiento
     -- pero puede causar problemas si se usa como subquery
     -- SELECT p_puede_cursar AS puede_cursar, p_mensaje AS mensaje;
-END //
+END$$
 
--- Restaurar el delimitador predeterminado
-DELIMITER ;-- Trigger para auditoría de cambios en evaluaciones
-DELIMITER //
-CREATE TRIGGER audit_evaluacion_update 
-AFTER UPDATE ON evaluacion
-FOR EACH ROW
-BEGIN
-    INSERT INTO auditoria (
-        usuario_id,
-        tipo_operacion,
-        tabla_afectada,
-        registro_afectado,
-        valor_anterior,
-        valor_nuevo,
-        ip_origen
-    ) VALUES (
-        @usuario_id,
-        'UPDATE',
-        'evaluacion',
-        NEW.id,
-        CONCAT('{"nota":', IFNULL(OLD.nota, 'null'), ',"nota_letra":"', IFNULL(OLD.nota_letra, ''), '"}'),
-        CONCAT('{"nota":', IFNULL(NEW.nota, 'null'), ',"nota_letra":"', IFNULL(NEW.nota_letra, ''), '"}'),
-        @ip_origen
-    );
-END //
 DELIMITER ;
 
--- Trigger para auditoría de inserciones en evaluaciones
-DELIMITER //
-CREATE TRIGGER audit_evaluacion_insert
-AFTER INSERT ON evaluacion
-FOR EACH ROW
-BEGIN
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `acta_examen`
+--
+
+CREATE TABLE `acta_examen` (
+  `id` int(11) NOT NULL,
+  `materia_id` int(11) NOT NULL,
+  `curso_id` int(11) NOT NULL,
+  `fecha` date NOT NULL,
+  `tipo` enum('1°Cuatrimestre','2°Cuatrimestre','Anual') NOT NULL,
+  `libro` int(11) DEFAULT NULL,
+  `folio` int(11) DEFAULT NULL,
+  `profesor_id` int(11) NOT NULL,
+  `cerrada` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `acta_examen`
+--
+
+INSERT INTO `acta_examen` (`id`, `materia_id`, `curso_id`, `fecha`, `tipo`, `libro`, `folio`, `profesor_id`, `cerrada`) VALUES
+(1, 1, 1, '2023-07-10', '1°Cuatrimestre', 1, 1, 1, 0),
+(2, 2, 1, '2023-07-11', '1°Cuatrimestre', 1, 2, 2, 0),
+(3, 3, 1, '2023-07-12', '1°Cuatrimestre', 1, 3, 3, 0),
+(4, 4, 1, '2023-12-05', '2°Cuatrimestre', 1, 4, 1, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `alumno`
+--
+
+CREATE TABLE `alumno` (
+  `id` int(11) NOT NULL,
+  `persona_id` int(11) NOT NULL,
+  `legajo` varchar(20) NOT NULL,
+  `fecha_ingreso` date NOT NULL,
+  `cohorte` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `alumno`
+--
+
+INSERT INTO `alumno` (`id`, `persona_id`, `legajo`, `fecha_ingreso`, `cohorte`) VALUES
+(1, 6, '12345', '2022-03-01', 2022),
+(2, 7, '12346', '2022-03-01', 2022),
+(3, 8, '12347', '2023-03-01', 2023),
+(4, 9, '12348', '2023-03-01', 2023);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `asistencia`
+--
+
+CREATE TABLE `asistencia` (
+  `id` int(11) NOT NULL,
+  `inscripcion_cursado_id` int(11) NOT NULL,
+  `fecha` date NOT NULL,
+  `estado` enum('Presente','Ausente','Justificado') NOT NULL,
+  `profesor_id` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `asistencia`
+--
+
+INSERT INTO `asistencia` (`id`, `inscripcion_cursado_id`, `fecha`, `estado`, `profesor_id`) VALUES
+(1, 1, '2023-04-05', 'Presente', 1),
+(2, 1, '2023-04-12', 'Presente', 1),
+(3, 1, '2023-04-19', 'Presente', 1),
+(4, 5, '2023-04-05', 'Presente', 1),
+(5, 5, '2023-04-12', 'Ausente', 1),
+(6, 5, '2023-04-19', 'Presente', 1),
+(7, 9, '2023-04-05', 'Presente', 1),
+(8, 9, '2023-04-12', 'Presente', 1),
+(9, 9, '2023-04-19', 'Presente', 1),
+(10, 13, '2023-04-05', 'Presente', 1),
+(11, 13, '2023-04-12', 'Presente', 1),
+(12, 13, '2023-04-19', 'Justificado', 1),
+(13, 1, '2025-05-11', 'Presente', 1),
+(14, 5, '2025-05-11', 'Presente', 1),
+(15, 11, '2025-05-12', 'Presente', 1),
+(16, 15, '2025-05-12', 'Ausente', 1),
+(17, 1, '2025-05-15', 'Ausente', 1),
+(18, 5, '2025-05-15', 'Justificado', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `auditoria`
+--
+
+CREATE TABLE `auditoria` (
+  `id` int(11) NOT NULL,
+  `usuario_id` int(11) DEFAULT NULL,
+  `fecha_hora` datetime DEFAULT current_timestamp(),
+  `tipo_operacion` varchar(20) NOT NULL,
+  `tabla_afectada` varchar(50) NOT NULL,
+  `registro_afectado` varchar(50) NOT NULL,
+  `valor_anterior` text DEFAULT NULL,
+  `valor_nuevo` text DEFAULT NULL,
+  `ip_origen` varchar(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `auditoria`
+--
+
+INSERT INTO `auditoria` (`id`, `usuario_id`, `fecha_hora`, `tipo_operacion`, `tabla_afectada`, `registro_afectado`, `valor_anterior`, `valor_nuevo`, `ip_origen`) VALUES
+(1, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '1', NULL, '{\"nota\":9,\"nota_letra\":\"Distinguido\"}', '192.168.1.100'),
+(2, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '2', NULL, '{\"nota\":4,\"nota_letra\":\"Aprobado\"}', '192.168.1.100'),
+(3, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '3', NULL, '{\"nota\":9,\"nota_letra\":\"Distinguido\"}', '192.168.1.100'),
+(4, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '4', NULL, '{\"nota\":7,\"nota_letra\":\"Bueno\"}', '192.168.1.100'),
+(5, 1, '2025-05-09 10:57:02', 'UPDATE', 'evaluacion', '3', '{\"nota\":9,\"nota_letra\":\"Distinguido\"}', '{\"nota\":9,\"nota_letra\":\"Sobresaliente\"}', '192.168.1.100'),
+(6, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '5', NULL, '{\"nota\":8,\"nota_letra\":\"Muy Bueno\"}', '192.168.1.100');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `certificacion`
+--
+
+CREATE TABLE `certificacion` (
+  `id` int(11) NOT NULL,
+  `alumno_id` int(11) NOT NULL,
+  `fecha_emision` date NOT NULL,
+  `tipo` enum('Alumno Regular','Analítico Parcial','Otro') NOT NULL,
+  `codigo_verificacion` varchar(50) DEFAULT NULL,
+  `autorizado_por` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `certificacion`
+--
+
+INSERT INTO `certificacion` (`id`, `alumno_id`, `fecha_emision`, `tipo`, `codigo_verificacion`, `autorizado_por`) VALUES
+(1, 1, '2023-04-15', 'Alumno Regular', '85EF5F16FC', 2),
+(2, 2, '2023-05-20', 'Analítico Parcial', '2DB06D73AC', 2),
+(3, 3, '2023-06-10', 'Otro', '6F69639A47', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `correlatividad`
+--
+
+CREATE TABLE `correlatividad` (
+  `id` int(11) NOT NULL,
+  `materia_id` int(11) NOT NULL,
+  `materia_correlativa_id` int(11) NOT NULL,
+  `tipo` enum('Para cursar regularizada','Para cursar acreditada','Para acreditar') NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `correlatividad`
+--
+
+INSERT INTO `correlatividad` (`id`, `materia_id`, `materia_correlativa_id`, `tipo`) VALUES
+(1, 5, 1, 'Para cursar regularizada'),
+(2, 5, 2, 'Para cursar regularizada'),
+(3, 6, 3, 'Para cursar acreditada'),
+(4, 6, 4, 'Para acreditar');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `curso`
+--
+
+CREATE TABLE `curso` (
+  `id` int(11) NOT NULL,
+  `codigo` varchar(10) NOT NULL,
+  `division` varchar(5) NOT NULL,
+  `anio` varchar(5) NOT NULL,
+  `turno` enum('Mañana','Tarde') NOT NULL,
+  `ciclo_lectivo` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `curso`
+--
+
+INSERT INTO `curso` (`id`, `codigo`, `division`, `anio`, `turno`, `ciclo_lectivo`) VALUES
+(1, '1PEF', 'A', '1°', 'Mañana', 2023),
+(2, '1PEF', 'B', '1°', 'Tarde', 2023),
+(3, '2PEF', 'A', '2°', 'Mañana', 2023),
+(4, '2PEF', 'B', '2°', 'Tarde', 2023);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `evaluacion`
+--
+
+CREATE TABLE `evaluacion` (
+  `id` int(11) NOT NULL,
+  `inscripcion_cursado_id` int(11) NOT NULL,
+  `tipo` enum('Parcial','Final','Coloquio') NOT NULL,
+  `instancia` enum('1°Cuatrimestre','2°Cuatrimestre','Anual') NOT NULL,
+  `fecha` date NOT NULL,
+  `nota` int(11) DEFAULT NULL,
+  `nota_letra` varchar(50) DEFAULT NULL,
+  `profesor_id` int(11) NOT NULL,
+  `observaciones` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `evaluacion`
+--
+
+INSERT INTO `evaluacion` (`id`, `inscripcion_cursado_id`, `tipo`, `instancia`, `fecha`, `nota`, `nota_letra`, `profesor_id`, `observaciones`) VALUES
+(1, 3, 'Parcial', '1°Cuatrimestre', '2023-06-15', 9, 'Distinguido', 3, 'Excelente desempeño'),
+(2, 7, 'Parcial', '1°Cuatrimestre', '2023-06-15', 4, 'Aprobado', 3, 'Desempeño satisfactorio'),
+(3, 11, 'Parcial', '1°Cuatrimestre', '2023-06-15', 9, 'Sobresaliente', 3, 'Excelente desempeño'),
+(4, 15, 'Parcial', '1°Cuatrimestre', '2023-06-15', 7, 'Bueno', 3, 'Desempeño satisfactorio'),
+(5, 3, 'Final', '1°Cuatrimestre', '2023-07-20', 8, 'Muy Bueno', 3, 'Aprobado');
+
+--
+-- Disparadores `evaluacion`
+--
+DELIMITER $$
+CREATE TRIGGER `audit_evaluacion_insert` AFTER INSERT ON `evaluacion` FOR EACH ROW BEGIN
     INSERT INTO auditoria (
         usuario_id,
         tipo_operacion,
@@ -561,5 +385,797 @@ BEGIN
         CONCAT('{"nota":', IFNULL(NEW.nota, 'null'), ',"nota_letra":"', IFNULL(NEW.nota_letra, ''), '"}'),
         @ip_origen
     );
-END //
+END
+$$
 DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `audit_evaluacion_update` AFTER UPDATE ON `evaluacion` FOR EACH ROW BEGIN
+    INSERT INTO auditoria (
+        usuario_id,
+        tipo_operacion,
+        tabla_afectada,
+        registro_afectado,
+        valor_anterior,
+        valor_nuevo,
+        ip_origen
+    ) VALUES (
+        @usuario_id,
+        'UPDATE',
+        'evaluacion',
+        NEW.id,
+        CONCAT('{"nota":', IFNULL(OLD.nota, 'null'), ',"nota_letra":"', IFNULL(OLD.nota_letra, ''), '"}'),
+        CONCAT('{"nota":', IFNULL(NEW.nota, 'null'), ',"nota_letra":"', IFNULL(NEW.nota_letra, ''), '"}'),
+        @ip_origen
+    );
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `inscripcion_cursado`
+--
+
+CREATE TABLE `inscripcion_cursado` (
+  `id` int(11) NOT NULL,
+  `alumno_id` int(11) NOT NULL,
+  `materia_id` int(11) NOT NULL,
+  `curso_id` int(11) NOT NULL,
+  `ciclo_lectivo` int(11) NOT NULL,
+  `fecha_inscripcion` date NOT NULL,
+  `estado` enum('Regular','Libre','Promocional') DEFAULT 'Regular'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `inscripcion_cursado`
+--
+
+INSERT INTO `inscripcion_cursado` (`id`, `alumno_id`, `materia_id`, `curso_id`, `ciclo_lectivo`, `fecha_inscripcion`, `estado`) VALUES
+(1, 1, 1, 1, 2023, '2023-03-10', 'Regular'),
+(2, 1, 2, 1, 2023, '2023-03-10', 'Regular'),
+(3, 1, 3, 1, 2023, '2023-03-10', 'Regular'),
+(4, 1, 4, 1, 2023, '2023-03-10', 'Regular'),
+(5, 2, 1, 1, 2023, '2023-03-11', 'Regular'),
+(6, 2, 2, 1, 2023, '2023-03-11', 'Regular'),
+(7, 2, 3, 1, 2023, '2023-03-11', 'Regular'),
+(8, 2, 4, 1, 2023, '2023-03-11', 'Regular'),
+(9, 3, 1, 2, 2023, '2023-03-12', 'Regular'),
+(10, 3, 2, 2, 2023, '2023-03-12', 'Regular'),
+(11, 3, 3, 2, 2023, '2023-03-12', 'Regular'),
+(12, 3, 4, 2, 2023, '2023-03-12', 'Regular'),
+(13, 4, 1, 2, 2023, '2023-03-13', 'Regular'),
+(14, 4, 2, 2, 2023, '2023-03-13', 'Regular'),
+(15, 4, 3, 2, 2023, '2023-03-13', 'Regular'),
+(16, 4, 4, 2, 2023, '2023-03-13', 'Regular');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `inscripcion_examen`
+--
+
+CREATE TABLE `inscripcion_examen` (
+  `id` int(11) NOT NULL,
+  `alumno_id` int(11) NOT NULL,
+  `acta_examen_id` int(11) NOT NULL,
+  `fecha_inscripcion` datetime NOT NULL DEFAULT current_timestamp(),
+  `estado` enum('Inscripto','Presente','Ausente') DEFAULT 'Inscripto'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `inscripcion_examen`
+--
+
+INSERT INTO `inscripcion_examen` (`id`, `alumno_id`, `acta_examen_id`, `fecha_inscripcion`, `estado`) VALUES
+(1, 1, 1, '2025-05-09 10:57:02', 'Presente'),
+(2, 1, 2, '2025-05-09 10:57:02', 'Presente'),
+(3, 2, 1, '2025-05-09 10:57:02', 'Presente'),
+(4, 3, 3, '2025-05-09 10:57:02', 'Presente'),
+(5, 4, 3, '2025-05-09 10:57:02', 'Inscripto');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `licencia_profesor`
+--
+
+CREATE TABLE `licencia_profesor` (
+  `id` int(11) NOT NULL,
+  `profesor_id` int(11) NOT NULL,
+  `fecha_inicio` date NOT NULL,
+  `fecha_fin` date NOT NULL,
+  `tipo` enum('Enfermedad','Particular','Otro') NOT NULL,
+  `observaciones` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `licencia_profesor`
+--
+
+INSERT INTO `licencia_profesor` (`id`, `profesor_id`, `fecha_inicio`, `fecha_fin`, `tipo`, `observaciones`) VALUES
+(1, 1, '2023-05-01', '2023-05-10', 'Enfermedad', 'Licencia médica por cirugía');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `materia`
+--
+
+CREATE TABLE `materia` (
+  `id` int(11) NOT NULL,
+  `nro_orden` int(11) NOT NULL,
+  `codigo` varchar(20) NOT NULL,
+  `nombre` varchar(255) NOT NULL,
+  `tipo` enum('Cuatrimestral','Anual') NOT NULL,
+  `anio` int(11) NOT NULL,
+  `cuatrimestre` enum('1°','2°','Anual') NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `materia`
+--
+
+INSERT INTO `materia` (`id`, `nro_orden`, `codigo`, `nombre`, `tipo`, `anio`, `cuatrimestre`) VALUES
+(1, 1, 'MAT101', 'Anatomía Funcional', 'Anual', 1, 'Anual'),
+(2, 2, 'MAT102', 'Fisiología del Ejercicio', 'Anual', 1, 'Anual'),
+(3, 3, 'MAT103', 'Deportes Individuales I', 'Cuatrimestral', 1, '1°'),
+(4, 4, 'MAT104', 'Deportes de Conjunto I', 'Cuatrimestral', 1, '2°'),
+(5, 5, 'MAT201', 'Entrenamiento Deportivo', 'Anual', 2, 'Anual'),
+(6, 6, 'MAT202', 'Didáctica de la Educación Física', 'Anual', 2, 'Anual');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `persona`
+--
+
+CREATE TABLE `persona` (
+  `id` int(11) NOT NULL,
+  `usuario_id` int(11) NOT NULL,
+  `apellidos` varchar(100) NOT NULL,
+  `nombres` varchar(100) NOT NULL,
+  `dni` varchar(15) NOT NULL,
+  `fecha_nacimiento` date NOT NULL,
+  `celular` varchar(20) DEFAULT NULL,
+  `domicilio` varchar(255) DEFAULT NULL,
+  `contacto_emergencia` varchar(255) DEFAULT NULL,
+  `foto_url` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `persona`
+--
+
+INSERT INTO `persona` (`id`, `usuario_id`, `apellidos`, `nombres`, `dni`, `fecha_nacimiento`, `celular`, `domicilio`, `contacto_emergencia`, `foto_url`) VALUES
+(1, 1, 'López', 'María', '20345678', '1980-05-15', '3511234567', 'Dirección 123', 'Contacto de emergencia', NULL),
+(2, 2, 'González', 'Roberto', '21456789', '1982-08-20', '3512345678', 'Dirección 456', 'Contacto de emergencia', NULL),
+(3, 3, 'Martínez', 'Carlos', '22567890', '1975-03-10', '3513456789', 'Dirección 789', 'Contacto de emergencia', NULL),
+(4, 4, 'Sánchez', 'Laura', '23678901', '1978-07-25', '3514567890', 'Dirección 101', 'Contacto de emergencia', NULL),
+(5, 5, 'Rodríguez', 'Juan', '24789012', '1983-11-12', '3515678901', 'Dirección 112', 'Contacto de emergencia', NULL),
+(6, 6, 'Fernández', 'Ana', '30123456', '2000-01-30', '3516789012', 'Dirección 213', 'Contacto de emergencia', NULL),
+(7, 7, 'Torres', 'Miguel', '31234567', '2001-04-05', '3517890123', 'Dirección 314', 'Contacto de emergencia', NULL),
+(8, 8, 'Díaz', 'Lucía', '32345678', '2002-06-18', '3518901234', 'Dirección 415', 'Contacto de emergencia', NULL),
+(9, 9, 'Pérez', 'Daniel', '33456789', '2003-09-22', '3519012345', 'Dirección 516', 'Contacto de emergencia', NULL),
+(10, 11, 'Rodriguez ', 'Horacio Andres', '42154777', '2000-11-26', '2644748596', 'Tucuman Sur ', 'Marcos Acuña - 264452512', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `profesor`
+--
+
+CREATE TABLE `profesor` (
+  `id` int(11) NOT NULL,
+  `persona_id` int(11) NOT NULL,
+  `titulo_profesional` varchar(255) NOT NULL,
+  `fecha_ingreso` date NOT NULL,
+  `horas_consulta` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `profesor`
+--
+
+INSERT INTO `profesor` (`id`, `persona_id`, `titulo_profesional`, `fecha_ingreso`, `horas_consulta`) VALUES
+(1, 3, 'Profesor de Educación Física', '2010-03-01', 'Lunes 14:00-16:00'),
+(2, 4, 'Licenciado en Educación Física', '2012-08-15', 'Martes 15:00-17:00'),
+(3, 5, 'Doctor en Ciencias del Deporte', '2015-02-10', 'Miércoles 16:00-18:00'),
+(4, 10, 'Tec. Sup. Desarrollo de Software', '2025-05-11', '3hs Lunes a Viernes 17hs a 19hs');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `profesor_materia`
+--
+
+CREATE TABLE `profesor_materia` (
+  `id` int(11) NOT NULL,
+  `profesor_id` int(11) NOT NULL,
+  `materia_id` int(11) NOT NULL,
+  `curso_id` int(11) NOT NULL,
+  `ciclo_lectivo` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `profesor_materia`
+--
+
+INSERT INTO `profesor_materia` (`id`, `profesor_id`, `materia_id`, `curso_id`, `ciclo_lectivo`) VALUES
+(1, 1, 1, 1, 2023),
+(2, 1, 1, 2, 2023),
+(7, 1, 4, 1, 2023),
+(8, 1, 4, 2, 2023),
+(3, 2, 2, 1, 2023),
+(4, 2, 2, 2, 2023),
+(9, 2, 5, 3, 2023),
+(10, 2, 5, 4, 2023),
+(5, 3, 3, 1, 2023),
+(6, 3, 3, 2, 2023),
+(11, 3, 6, 3, 2023),
+(12, 3, 6, 4, 2023),
+(13, 4, 2, 3, 2023);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `usuario`
+--
+
+CREATE TABLE `usuario` (
+  `id` int(11) NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `tipo` enum('administrador','preceptor','profesor','alumno') NOT NULL,
+  `ultimo_acceso` datetime DEFAULT NULL,
+  `activo` tinyint(1) DEFAULT 1,
+  `fecha_creacion` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `usuario`
+--
+
+INSERT INTO `usuario` (`id`, `username`, `password`, `tipo`, `ultimo_acceso`, `activo`, `fecha_creacion`) VALUES
+(1, 'admin1', '$2y$10$2sAVzqlFTRicsYIz/GRHS.fNkV936nDflh8o2a2eBlK2ciip6bz6.', 'administrador', NULL, 1, '2025-05-09 10:57:02'),
+(2, 'preceptor1', '$2y$10$NTdQX9nzZHZbtSQwoLNqM.HBOc3kGaHacdI4aNXcJA/tlsGK0WSCa', 'preceptor', NULL, 1, '2025-05-09 10:57:02'),
+(3, 'prof1', '$2y$10$KS1RDrBMekzTGNWuSMhgmOyIb5DO4PIEIWjlFOVx/0le4if33.Q5y', 'profesor', NULL, 1, '2025-05-09 10:57:02'),
+(4, 'prof2', '$2y$10$DTJHj83S5SoYtCtlYcmybeID8bDgh4mOlUKECdC/TDUfmzL5TKjn.', 'profesor', NULL, 1, '2025-05-09 10:57:02'),
+(5, 'prof3', '$2y$10$ZiXBSX1IHrJauSMUOc8g2e/LRMGCRO//tG77XAlEefWMmjb8E3E5O', 'profesor', NULL, 1, '2025-05-09 10:57:02'),
+(6, 'alum1', '$2y$10$Dgyf5NloslClvIFnajy4FeNpu//9gjuUD/UkL3WBsXX.CwEIoXys2', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
+(7, 'alum2', '$2y$10$uKGDnS8s2kb1iH8pjsUHjeytHYtdTspKEeQam24fBBxkXfngwq03G', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
+(8, 'alum3', '$2y$10$2fKYu1IIvwX/vdiFSgbB.e9rAfKshNNuY0dopEj9u05Fk0uJrtmOe', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
+(9, 'alum4', '$2y$10$TJnMP0KNK6UmeocPIs9Vr.Nb37wT1QuoPf0iMJnKlwnuWrGk9bcQq', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
+(11, 'hrodriguez', '$2y$10$.erd5F21E6lta8SlxdDSoeGX9cl91UiRD/DwWXDBuydoTJZeEWSRC', 'profesor', NULL, 1, '2025-05-12 00:15:53');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `vista_alumnos`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_alumnos` (
+`alumno_id` int(11)
+,`apellidos` varchar(100)
+,`nombres` varchar(100)
+,`dni` varchar(15)
+,`legajo` varchar(20)
+,`fecha_ingreso` date
+,`cohorte` int(11)
+,`fecha_nacimiento` date
+,`celular` varchar(20)
+,`domicilio` varchar(255)
+,`contacto_emergencia` varchar(255)
+,`username` varchar(50)
+,`activo` tinyint(1)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `vista_asistencia`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_asistencia` (
+`legajo` varchar(20)
+,`alumno_nombre` varchar(202)
+,`materia_codigo` varchar(20)
+,`materia_nombre` varchar(255)
+,`curso_codigo` varchar(10)
+,`ciclo_lectivo` int(11)
+,`fecha` date
+,`estado` enum('Presente','Ausente','Justificado')
+,`profesor_nombre` varchar(202)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `vista_correlatividades`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_correlatividades` (
+`materia_id` int(11)
+,`nro_orden` int(11)
+,`codigo` varchar(20)
+,`materia_nombre` varchar(255)
+,`tipo` enum('Cuatrimestral','Anual')
+,`anio` int(11)
+,`cuatrimestre` enum('1°','2°','Anual')
+,`correlativa_codigo` varchar(20)
+,`correlativa_nombre` varchar(255)
+,`tipo_correlatividad` enum('Para cursar regularizada','Para cursar acreditada','Para acreditar')
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `vista_personas`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_personas` (
+`id` int(11)
+,`dni` varchar(15)
+,`apellidos` varchar(100)
+,`nombres` varchar(100)
+,`fecha_nacimiento` date
+,`celular` varchar(20)
+,`domicilio` varchar(255)
+,`contacto_emergencia` varchar(255)
+,`username` varchar(50)
+,`tipo` enum('administrador','preceptor','profesor','alumno')
+,`activo` tinyint(1)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `vista_profesores`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_profesores` (
+`profesor_id` int(11)
+,`apellidos` varchar(100)
+,`nombres` varchar(100)
+,`dni` varchar(15)
+,`titulo_profesional` varchar(255)
+,`fecha_ingreso` date
+,`horas_consulta` varchar(255)
+,`celular` varchar(20)
+,`domicilio` varchar(255)
+,`contacto_emergencia` varchar(255)
+,`username` varchar(50)
+,`activo` tinyint(1)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura Stand-in para la vista `vista_situacion_academica`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_situacion_academica` (
+`alumno_id` int(11)
+,`legajo` varchar(20)
+,`alumno_nombre` varchar(202)
+,`nro_orden` int(11)
+,`materia_codigo` varchar(20)
+,`materia_nombre` varchar(255)
+,`estado` enum('Regular','Libre','Promocional')
+,`curso_codigo` varchar(10)
+,`ciclo_lectivo` int(11)
+,`nota_final` int(11)
+);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `vista_alumnos`
+--
+DROP TABLE IF EXISTS `vista_alumnos`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_alumnos`  AS SELECT `a`.`id` AS `alumno_id`, `pers`.`apellidos` AS `apellidos`, `pers`.`nombres` AS `nombres`, `pers`.`dni` AS `dni`, `a`.`legajo` AS `legajo`, `a`.`fecha_ingreso` AS `fecha_ingreso`, `a`.`cohorte` AS `cohorte`, `pers`.`fecha_nacimiento` AS `fecha_nacimiento`, `pers`.`celular` AS `celular`, `pers`.`domicilio` AS `domicilio`, `pers`.`contacto_emergencia` AS `contacto_emergencia`, `u`.`username` AS `username`, `u`.`activo` AS `activo` FROM ((`alumno` `a` join `persona` `pers` on(`a`.`persona_id` = `pers`.`id`)) join `usuario` `u` on(`pers`.`usuario_id` = `u`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `vista_asistencia`
+--
+DROP TABLE IF EXISTS `vista_asistencia`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_asistencia`  AS SELECT `a`.`legajo` AS `legajo`, concat(`p`.`apellidos`,', ',`p`.`nombres`) AS `alumno_nombre`, `m`.`codigo` AS `materia_codigo`, `m`.`nombre` AS `materia_nombre`, `c`.`codigo` AS `curso_codigo`, `c`.`ciclo_lectivo` AS `ciclo_lectivo`, `asist`.`fecha` AS `fecha`, `asist`.`estado` AS `estado`, concat(`pp`.`apellidos`,', ',`pp`.`nombres`) AS `profesor_nombre` FROM (((((((`asistencia` `asist` join `inscripcion_cursado` `ic` on(`asist`.`inscripcion_cursado_id` = `ic`.`id`)) join `alumno` `a` on(`ic`.`alumno_id` = `a`.`id`)) join `persona` `p` on(`a`.`persona_id` = `p`.`id`)) join `materia` `m` on(`ic`.`materia_id` = `m`.`id`)) join `curso` `c` on(`ic`.`curso_id` = `c`.`id`)) join `profesor` `prof` on(`asist`.`profesor_id` = `prof`.`id`)) join `persona` `pp` on(`prof`.`persona_id` = `pp`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `vista_correlatividades`
+--
+DROP TABLE IF EXISTS `vista_correlatividades`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_correlatividades`  AS SELECT `m`.`id` AS `materia_id`, `m`.`nro_orden` AS `nro_orden`, `m`.`codigo` AS `codigo`, `m`.`nombre` AS `materia_nombre`, `m`.`tipo` AS `tipo`, `m`.`anio` AS `anio`, `m`.`cuatrimestre` AS `cuatrimestre`, `mc`.`codigo` AS `correlativa_codigo`, `mc`.`nombre` AS `correlativa_nombre`, `c`.`tipo` AS `tipo_correlatividad` FROM ((`materia` `m` left join `correlatividad` `c` on(`m`.`id` = `c`.`materia_id`)) left join `materia` `mc` on(`c`.`materia_correlativa_id` = `mc`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `vista_personas`
+--
+DROP TABLE IF EXISTS `vista_personas`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_personas`  AS SELECT `p`.`id` AS `id`, `p`.`dni` AS `dni`, `p`.`apellidos` AS `apellidos`, `p`.`nombres` AS `nombres`, `p`.`fecha_nacimiento` AS `fecha_nacimiento`, `p`.`celular` AS `celular`, `p`.`domicilio` AS `domicilio`, `p`.`contacto_emergencia` AS `contacto_emergencia`, `u`.`username` AS `username`, `u`.`tipo` AS `tipo`, `u`.`activo` AS `activo` FROM (`persona` `p` join `usuario` `u` on(`p`.`usuario_id` = `u`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `vista_profesores`
+--
+DROP TABLE IF EXISTS `vista_profesores`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_profesores`  AS SELECT `p`.`id` AS `profesor_id`, `pers`.`apellidos` AS `apellidos`, `pers`.`nombres` AS `nombres`, `pers`.`dni` AS `dni`, `p`.`titulo_profesional` AS `titulo_profesional`, `p`.`fecha_ingreso` AS `fecha_ingreso`, `p`.`horas_consulta` AS `horas_consulta`, `pers`.`celular` AS `celular`, `pers`.`domicilio` AS `domicilio`, `pers`.`contacto_emergencia` AS `contacto_emergencia`, `u`.`username` AS `username`, `u`.`activo` AS `activo` FROM ((`profesor` `p` join `persona` `pers` on(`p`.`persona_id` = `pers`.`id`)) join `usuario` `u` on(`pers`.`usuario_id` = `u`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `vista_situacion_academica`
+--
+DROP TABLE IF EXISTS `vista_situacion_academica`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_situacion_academica`  AS SELECT `a`.`id` AS `alumno_id`, `a`.`legajo` AS `legajo`, concat(`p`.`apellidos`,', ',`p`.`nombres`) AS `alumno_nombre`, `m`.`nro_orden` AS `nro_orden`, `m`.`codigo` AS `materia_codigo`, `m`.`nombre` AS `materia_nombre`, `ic`.`estado` AS `estado`, `c`.`codigo` AS `curso_codigo`, `c`.`ciclo_lectivo` AS `ciclo_lectivo`, (select max(`e`.`nota`) from `evaluacion` `e` where `e`.`inscripcion_cursado_id` = `ic`.`id` and `e`.`tipo` = 'Final') AS `nota_final` FROM ((((`alumno` `a` join `persona` `p` on(`a`.`persona_id` = `p`.`id`)) join `inscripcion_cursado` `ic` on(`a`.`id` = `ic`.`alumno_id`)) join `materia` `m` on(`ic`.`materia_id` = `m`.`id`)) join `curso` `c` on(`ic`.`curso_id` = `c`.`id`)) ;
+
+--
+-- Índices para tablas volcadas
+--
+
+--
+-- Indices de la tabla `acta_examen`
+--
+ALTER TABLE `acta_examen`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `materia_id` (`materia_id`),
+  ADD KEY `curso_id` (`curso_id`),
+  ADD KEY `profesor_id` (`profesor_id`),
+  ADD KEY `idx_fecha` (`fecha`),
+  ADD KEY `idx_libro_folio` (`libro`,`folio`),
+  ADD KEY `idx_cerrada` (`cerrada`);
+
+--
+-- Indices de la tabla `alumno`
+--
+ALTER TABLE `alumno`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `persona_id` (`persona_id`),
+  ADD UNIQUE KEY `legajo` (`legajo`),
+  ADD KEY `idx_legajo` (`legajo`),
+  ADD KEY `idx_cohorte` (`cohorte`);
+
+--
+-- Indices de la tabla `asistencia`
+--
+ALTER TABLE `asistencia`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_asistencia` (`inscripcion_cursado_id`,`fecha`),
+  ADD KEY `profesor_id` (`profesor_id`),
+  ADD KEY `idx_fecha` (`fecha`),
+  ADD KEY `idx_estado` (`estado`);
+
+--
+-- Indices de la tabla `auditoria`
+--
+ALTER TABLE `auditoria`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `usuario_id` (`usuario_id`),
+  ADD KEY `idx_fecha_hora` (`fecha_hora`),
+  ADD KEY `idx_tipo_operacion` (`tipo_operacion`),
+  ADD KEY `idx_tabla_afectada` (`tabla_afectada`);
+
+--
+-- Indices de la tabla `certificacion`
+--
+ALTER TABLE `certificacion`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `codigo_verificacion` (`codigo_verificacion`),
+  ADD KEY `alumno_id` (`alumno_id`),
+  ADD KEY `autorizado_por` (`autorizado_por`),
+  ADD KEY `idx_fecha_emision` (`fecha_emision`),
+  ADD KEY `idx_tipo` (`tipo`);
+
+--
+-- Indices de la tabla `correlatividad`
+--
+ALTER TABLE `correlatividad`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_correlatividad` (`materia_id`,`materia_correlativa_id`,`tipo`),
+  ADD KEY `materia_correlativa_id` (`materia_correlativa_id`),
+  ADD KEY `idx_tipo_correlatividad` (`tipo`);
+
+--
+-- Indices de la tabla `curso`
+--
+ALTER TABLE `curso`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_curso_completo` (`codigo`,`division`,`ciclo_lectivo`),
+  ADD KEY `idx_turno` (`turno`),
+  ADD KEY `idx_ciclo_lectivo` (`ciclo_lectivo`);
+
+--
+-- Indices de la tabla `evaluacion`
+--
+ALTER TABLE `evaluacion`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `inscripcion_cursado_id` (`inscripcion_cursado_id`),
+  ADD KEY `profesor_id` (`profesor_id`),
+  ADD KEY `idx_tipo_instancia` (`tipo`,`instancia`),
+  ADD KEY `idx_fecha` (`fecha`);
+
+--
+-- Indices de la tabla `inscripcion_cursado`
+--
+ALTER TABLE `inscripcion_cursado`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_inscripcion_cursado` (`alumno_id`,`materia_id`,`curso_id`,`ciclo_lectivo`),
+  ADD KEY `materia_id` (`materia_id`),
+  ADD KEY `curso_id` (`curso_id`),
+  ADD KEY `idx_estado` (`estado`),
+  ADD KEY `idx_ciclo_lectivo` (`ciclo_lectivo`);
+
+--
+-- Indices de la tabla `inscripcion_examen`
+--
+ALTER TABLE `inscripcion_examen`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_inscripcion_examen` (`alumno_id`,`acta_examen_id`),
+  ADD KEY `acta_examen_id` (`acta_examen_id`),
+  ADD KEY `idx_estado` (`estado`),
+  ADD KEY `idx_fecha_inscripcion` (`fecha_inscripcion`);
+
+--
+-- Indices de la tabla `licencia_profesor`
+--
+ALTER TABLE `licencia_profesor`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `profesor_id` (`profesor_id`),
+  ADD KEY `idx_fecha_inicio_fin` (`fecha_inicio`,`fecha_fin`),
+  ADD KEY `idx_tipo` (`tipo`);
+
+--
+-- Indices de la tabla `materia`
+--
+ALTER TABLE `materia`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_materia_codigo` (`codigo`),
+  ADD KEY `idx_nro_orden` (`nro_orden`),
+  ADD KEY `idx_anio_cuatrimestre` (`anio`,`cuatrimestre`);
+
+--
+-- Indices de la tabla `persona`
+--
+ALTER TABLE `persona`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `dni` (`dni`),
+  ADD KEY `usuario_id` (`usuario_id`),
+  ADD KEY `idx_dni` (`dni`),
+  ADD KEY `idx_apellidos_nombres` (`apellidos`,`nombres`);
+
+--
+-- Indices de la tabla `profesor`
+--
+ALTER TABLE `profesor`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `persona_id` (`persona_id`);
+
+--
+-- Indices de la tabla `profesor_materia`
+--
+ALTER TABLE `profesor_materia`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_profesor_materia_curso` (`profesor_id`,`materia_id`,`curso_id`,`ciclo_lectivo`),
+  ADD KEY `materia_id` (`materia_id`),
+  ADD KEY `curso_id` (`curso_id`),
+  ADD KEY `idx_ciclo_lectivo` (`ciclo_lectivo`);
+
+--
+-- Indices de la tabla `usuario`
+--
+ALTER TABLE `usuario`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `username` (`username`),
+  ADD KEY `idx_username` (`username`),
+  ADD KEY `idx_tipo` (`tipo`),
+  ADD KEY `username_2` (`username`);
+
+--
+-- AUTO_INCREMENT de las tablas volcadas
+--
+
+--
+-- AUTO_INCREMENT de la tabla `acta_examen`
+--
+ALTER TABLE `acta_examen`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT de la tabla `alumno`
+--
+ALTER TABLE `alumno`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT de la tabla `asistencia`
+--
+ALTER TABLE `asistencia`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT de la tabla `auditoria`
+--
+ALTER TABLE `auditoria`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT de la tabla `certificacion`
+--
+ALTER TABLE `certificacion`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT de la tabla `correlatividad`
+--
+ALTER TABLE `correlatividad`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT de la tabla `curso`
+--
+ALTER TABLE `curso`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT de la tabla `evaluacion`
+--
+ALTER TABLE `evaluacion`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT de la tabla `inscripcion_cursado`
+--
+ALTER TABLE `inscripcion_cursado`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
+-- AUTO_INCREMENT de la tabla `inscripcion_examen`
+--
+ALTER TABLE `inscripcion_examen`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT de la tabla `licencia_profesor`
+--
+ALTER TABLE `licencia_profesor`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT de la tabla `materia`
+--
+ALTER TABLE `materia`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT de la tabla `persona`
+--
+ALTER TABLE `persona`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT de la tabla `profesor`
+--
+ALTER TABLE `profesor`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT de la tabla `profesor_materia`
+--
+ALTER TABLE `profesor_materia`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT de la tabla `usuario`
+--
+ALTER TABLE `usuario`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- Restricciones para tablas volcadas
+--
+
+--
+-- Filtros para la tabla `acta_examen`
+--
+ALTER TABLE `acta_examen`
+  ADD CONSTRAINT `acta_examen_ibfk_1` FOREIGN KEY (`materia_id`) REFERENCES `materia` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `acta_examen_ibfk_2` FOREIGN KEY (`curso_id`) REFERENCES `curso` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `acta_examen_ibfk_3` FOREIGN KEY (`profesor_id`) REFERENCES `profesor` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `alumno`
+--
+ALTER TABLE `alumno`
+  ADD CONSTRAINT `alumno_ibfk_1` FOREIGN KEY (`persona_id`) REFERENCES `persona` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `asistencia`
+--
+ALTER TABLE `asistencia`
+  ADD CONSTRAINT `asistencia_ibfk_1` FOREIGN KEY (`inscripcion_cursado_id`) REFERENCES `inscripcion_cursado` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `asistencia_ibfk_2` FOREIGN KEY (`profesor_id`) REFERENCES `profesor` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `auditoria`
+--
+ALTER TABLE `auditoria`
+  ADD CONSTRAINT `auditoria_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`) ON DELETE SET NULL;
+
+--
+-- Filtros para la tabla `certificacion`
+--
+ALTER TABLE `certificacion`
+  ADD CONSTRAINT `certificacion_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `alumno` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `certificacion_ibfk_2` FOREIGN KEY (`autorizado_por`) REFERENCES `usuario` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `correlatividad`
+--
+ALTER TABLE `correlatividad`
+  ADD CONSTRAINT `correlatividad_ibfk_1` FOREIGN KEY (`materia_id`) REFERENCES `materia` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `correlatividad_ibfk_2` FOREIGN KEY (`materia_correlativa_id`) REFERENCES `materia` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `evaluacion`
+--
+ALTER TABLE `evaluacion`
+  ADD CONSTRAINT `evaluacion_ibfk_1` FOREIGN KEY (`inscripcion_cursado_id`) REFERENCES `inscripcion_cursado` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `evaluacion_ibfk_2` FOREIGN KEY (`profesor_id`) REFERENCES `profesor` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `inscripcion_cursado`
+--
+ALTER TABLE `inscripcion_cursado`
+  ADD CONSTRAINT `inscripcion_cursado_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `alumno` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `inscripcion_cursado_ibfk_2` FOREIGN KEY (`materia_id`) REFERENCES `materia` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `inscripcion_cursado_ibfk_3` FOREIGN KEY (`curso_id`) REFERENCES `curso` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `inscripcion_examen`
+--
+ALTER TABLE `inscripcion_examen`
+  ADD CONSTRAINT `inscripcion_examen_ibfk_1` FOREIGN KEY (`alumno_id`) REFERENCES `alumno` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `inscripcion_examen_ibfk_2` FOREIGN KEY (`acta_examen_id`) REFERENCES `acta_examen` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `licencia_profesor`
+--
+ALTER TABLE `licencia_profesor`
+  ADD CONSTRAINT `licencia_profesor_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `profesor` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `persona`
+--
+ALTER TABLE `persona`
+  ADD CONSTRAINT `persona_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `profesor`
+--
+ALTER TABLE `profesor`
+  ADD CONSTRAINT `profesor_ibfk_1` FOREIGN KEY (`persona_id`) REFERENCES `persona` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `profesor_materia`
+--
+ALTER TABLE `profesor_materia`
+  ADD CONSTRAINT `profesor_materia_ibfk_1` FOREIGN KEY (`profesor_id`) REFERENCES `profesor` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `profesor_materia_ibfk_2` FOREIGN KEY (`materia_id`) REFERENCES `materia` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `profesor_materia_ibfk_3` FOREIGN KEY (`curso_id`) REFERENCES `curso` (`id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
