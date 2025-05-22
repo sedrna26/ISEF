@@ -70,6 +70,7 @@ $tipo = $_SESSION['tipo'];
                 <?php if ($tipo === 'administrador'): ?>
                     <li><a href="usuarios.php">Gestión de Usuarios</a></li>
                     <li><a href="profesores.php">Gestión de Profesores</a></li>
+                    <li><a href="preceptores.php">Gestión de Preceptores</a></li>
                     <li><a href="alumnos.php">Gestión de Alumnos</a></li>
                     <li><a href="materias.php">Gestión de Materias</a></li>
                     <li><a href="cursos.php">Gestión de Cursos</a></li>

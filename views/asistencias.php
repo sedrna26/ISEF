@@ -123,14 +123,66 @@ if ($tipo_usuario === 'profesor') {
     }
 }
 
-// 4️⃣ Obtener las últimas 50 asistencias registradas
-$asistencias = $mysqli->query("
-    SELECT a.id, a.fecha, a.estado, asi.alumno_nombre, asi.materia_nombre, asi.curso_codigo, asi.profesor_nombre
-    FROM vista_asistencia asi
-    JOIN asistencia a ON asi.materia_codigo = asi.materia_codigo
-    ORDER BY a.fecha DESC
-    LIMIT 50
-");
+// Configuración de paginación
+$registros_por_pagina = 20;
+$pagina_actual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1;
+$offset = ($pagina_actual - 1) * $registros_por_pagina;
+
+// Obtener total de registros para la paginación
+if ($tipo_usuario === 'profesor') {
+    $total_registros = $mysqli->query("
+        SELECT COUNT(*) as total FROM asistencia a 
+        WHERE a.profesor_id = $profesor_id
+    ")->fetch_assoc()['total'];
+} else {
+    $total_registros = $mysqli->query("
+        SELECT COUNT(*) as total FROM asistencia
+    ")->fetch_assoc()['total'];
+}
+
+$total_paginas = ceil($total_registros / $registros_por_pagina);
+
+// 4️⃣ Obtener las asistencias registradas con paginación
+if ($tipo_usuario === 'profesor') {
+    // Para profesores: solo sus registros
+    $asistencias = $mysqli->query("
+        SELECT a.id, a.fecha, a.estado, 
+               CONCAT(p.apellidos, ', ', p.nombres) as alumno_nombre,
+               m.nombre as materia_nombre, 
+               c.codigo as curso_codigo,
+               CONCAT(pp.apellidos, ', ', pp.nombres) as profesor_nombre
+        FROM asistencia a
+        JOIN inscripcion_cursado ic ON a.inscripcion_cursado_id = ic.id
+        JOIN alumno al ON ic.alumno_id = al.id
+        JOIN persona p ON al.persona_id = p.id
+        JOIN materia m ON ic.materia_id = m.id
+        JOIN curso c ON ic.curso_id = c.id
+        JOIN profesor prof ON a.profesor_id = prof.id
+        JOIN persona pp ON prof.persona_id = pp.id
+        WHERE a.profesor_id = $profesor_id
+        ORDER BY a.fecha DESC
+        LIMIT $registros_por_pagina OFFSET $offset
+    ");
+} else {
+    // Para preceptores: mostrar todas las asistencias
+    $asistencias = $mysqli->query("
+        SELECT a.id, a.fecha, a.estado, 
+               CONCAT(p.apellidos, ', ', p.nombres) as alumno_nombre,
+               m.nombre as materia_nombre, 
+               c.codigo as curso_codigo,
+               CONCAT(pp.apellidos, ', ', pp.nombres) as profesor_nombre
+        FROM asistencia a
+        JOIN inscripcion_cursado ic ON a.inscripcion_cursado_id = ic.id
+        JOIN alumno al ON ic.alumno_id = al.id
+        JOIN persona p ON al.persona_id = p.id
+        JOIN materia m ON ic.materia_id = m.id
+        JOIN curso c ON ic.curso_id = c.id
+        JOIN profesor prof ON a.profesor_id = prof.id
+        JOIN persona pp ON prof.persona_id = pp.id
+        ORDER BY a.fecha DESC
+        LIMIT $registros_por_pagina OFFSET $offset
+    ");
+}
 ?>
 
 <!DOCTYPE html>
@@ -261,5 +313,45 @@ $asistencias = $mysqli->query("
             <?php endwhile; ?>
         </tbody>
     </table>
+
+    <!-- Controles de paginación -->
+    <div style="margin-top: 20px; text-align: center;">
+        <?php if ($total_paginas > 1): ?>
+            <div class="paginacion">
+                <?php if ($pagina_actual > 1): ?>
+                    <a href="?pagina=1<?= isset($_GET['curso_id']) ? '&curso_id=' . $_GET['curso_id'] : '' ?><?= isset($_GET['materia_id']) ? '&materia_id=' . $_GET['materia_id'] : '' ?>">&laquo; Primera</a>
+                    <a href="?pagina=<?= $pagina_actual - 1 ?><?= isset($_GET['curso_id']) ? '&curso_id=' . $_GET['curso_id'] : '' ?><?= isset($_GET['materia_id']) ? '&materia_id=' . $_GET['materia_id'] : '' ?>">&lsaquo; Anterior</a>
+                <?php endif; ?>
+
+                <span>Página <?= $pagina_actual ?> de <?= $total_paginas ?></span>
+
+                <?php if ($pagina_actual < $total_paginas): ?>
+                    <a href="?pagina=<?= $pagina_actual + 1 ?><?= isset($_GET['curso_id']) ? '&curso_id=' . $_GET['curso_id'] : '' ?><?= isset($_GET['materia_id']) ? '&materia_id=' . $_GET['materia_id'] : '' ?>">Siguiente &rsaquo;</a>
+                    <a href="?pagina=<?= $total_paginas ?><?= isset($_GET['curso_id']) ? '&curso_id=' . $_GET['curso_id'] : '' ?><?= isset($_GET['materia_id']) ? '&materia_id=' . $_GET['materia_id'] : '' ?>">Última &raquo;</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <style>
+        .paginacion {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .paginacion a {
+            color: #0066cc;
+            padding: 8px 16px;
+            text-decoration: none;
+            border: 1px solid #ddd;
+            margin: 0 4px;
+        }
+        .paginacion a:hover {
+            background-color: #f2f2f2;
+        }
+        .paginacion span {
+            padding: 8px 16px;
+            margin: 0 4px;
+        }
+    </style>
 </body>
 </html>
