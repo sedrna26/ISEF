@@ -13,6 +13,8 @@ if ($conn->connect_error) {
     die("Conexión fallida: " . $conn->connect_error);
 }
 
+$error = '';
+
 // Si se envió el formulario de login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['password'])) {
     $stmt = $conn->prepare("SELECT id, password, tipo, debe_cambiar_password FROM usuario WHERE username = ? AND activo = 1");
@@ -36,18 +38,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             
             // Verificar si debe cambiar contraseña
             if ($debe_cambiar_password) {
-                header("Location: views/cambiar_password.php");
+               header("Location: views/cambiar_password.php"); // [cite: 217]
+                 exit;
             } else {
-                header("Location: views/dashboard.php");
+                        header("Location: views/dashboard.php"); // [cite: 218]
+                     exit;
+
             }
             exit;
         } else {
-            $error = "Contraseña incorrecta.";
+            $error = "Usuario o contraseña incorrectos.";
         }
     } else {
-        $error = "Usuario no encontrado o inactivo.";
+        $error = "Usuario o contraseña incorrectos.";
     }
     $stmt->close();
+}
+
+// Cerrar sesión si se viene del logout
+if (isset($_GET['logout'])) {
+    $_SESSION = [];
+    session_destroy();
+    $error = "Sesión cerrada correctamente.";
 }
 ?>
 
@@ -130,6 +142,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             margin-bottom: 20px;
             text-align: center;
         }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
         .info {
             background-color: #d1ecf1;
             color: #0c5460;
@@ -153,6 +173,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
         
         <?php if (!empty($error)): ?>
             <div class="error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
+        
+        <?php if (isset($_SESSION['mensaje'])): ?>
+            <div class="success"><?= htmlspecialchars($_SESSION['mensaje']) ?></div>
+            <?php unset($_SESSION['mensaje']); ?>
         <?php endif; ?>
         
         <form method="POST">

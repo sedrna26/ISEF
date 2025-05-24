@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 22-05-2025 a las 00:13:26
+-- Tiempo de generación: 23-05-2025 a las 01:53:20
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -230,7 +230,13 @@ INSERT INTO `asistencia` (`id`, `inscripcion_cursado_id`, `fecha`, `estado`, `pr
 (15, 11, '2025-05-12', 'Presente', 1),
 (16, 15, '2025-05-12', 'Ausente', 1),
 (17, 1, '2025-05-15', 'Ausente', 1),
-(18, 5, '2025-05-15', 'Justificado', 1);
+(18, 5, '2025-05-15', 'Justificado', 1),
+(19, 11, '2025-05-22', 'Presente', 1),
+(20, 15, '2025-05-22', 'Presente', 1),
+(21, 4, '2025-05-22', 'Presente', 1),
+(22, 8, '2025-05-22', 'Justificado', 1),
+(23, 2, '2025-05-22', 'Presente', 1),
+(24, 6, '2025-05-22', 'Presente', 1);
 
 -- --------------------------------------------------------
 
@@ -557,7 +563,92 @@ INSERT INTO `persona` (`id`, `usuario_id`, `apellidos`, `nombres`, `dni`, `fecha
 (7, 7, 'Torres', 'Miguel', '31234567', '2001-04-05', '3517890123', 'Dirección 314', 'Contacto de emergencia', NULL),
 (8, 8, 'Díaz', 'Lucía', '32345678', '2002-06-18', '3518901234', 'Dirección 415', 'Contacto de emergencia', NULL),
 (9, 9, 'Pérez', 'Daniel', '33456789', '2003-09-22', '3519012345', 'Dirección 516', 'Contacto de emergencia', NULL),
-(10, 11, 'Rodriguez ', 'Horacio Andres', '42154777', '2000-11-26', '2644748596', 'Tucuman Sur ', 'Marcos Acuña - 264452512', NULL);
+(10, 11, 'Rodriguez ', 'Horacio Andres', '42154777', '2000-11-26', '2644748596', 'Tucuman Sur ', 'Marcos Acuña - 264452512', NULL),
+(11, 12, 'Juan', 'Lopez', '20412541', '1966-05-22', '2641254125', 'Alvear Sur', '2644748512', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `preceptor`
+--
+
+CREATE TABLE `preceptor` (
+  `id` int(11) NOT NULL,
+  `persona_id` int(11) NOT NULL,
+  `titulo_profesional` varchar(255) NOT NULL,
+  `fecha_ingreso` date NOT NULL,
+  `sector_asignado` varchar(100) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Disparadores `preceptor`
+--
+DELIMITER $$
+CREATE TRIGGER `audit_preceptor_delete` BEFORE DELETE ON `preceptor` FOR EACH ROW BEGIN
+    INSERT INTO auditoria (
+        usuario_id,
+        tipo_operacion,
+        tabla_afectada,
+        registro_afectado,
+        valor_anterior,
+        valor_nuevo,
+        ip_origen
+    ) VALUES (
+        @usuario_id,
+        'DELETE',
+        'preceptor',
+        OLD.id,
+        CONCAT('{"titulo_profesional":"', IFNULL(OLD.titulo_profesional, ''), '","sector_asignado":"', IFNULL(OLD.sector_asignado, ''), '"}'),
+        NULL,
+        @ip_origen
+    );
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `audit_preceptor_insert` AFTER INSERT ON `preceptor` FOR EACH ROW BEGIN
+    INSERT INTO auditoria (
+        usuario_id,
+        tipo_operacion,
+        tabla_afectada,
+        registro_afectado,
+        valor_anterior,
+        valor_nuevo,
+        ip_origen
+    ) VALUES (
+        @usuario_id,
+        'INSERT',
+        'preceptor',
+        NEW.id,
+        NULL,
+        CONCAT('{"titulo_profesional":"', IFNULL(NEW.titulo_profesional, ''), '","sector_asignado":"', IFNULL(NEW.sector_asignado, ''), '"}'),
+        @ip_origen
+    );
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `audit_preceptor_update` AFTER UPDATE ON `preceptor` FOR EACH ROW BEGIN
+    INSERT INTO auditoria (
+        usuario_id,
+        tipo_operacion,
+        tabla_afectada,
+        registro_afectado,
+        valor_anterior,
+        valor_nuevo,
+        ip_origen
+    ) VALUES (
+        @usuario_id,
+        'UPDATE',
+        'preceptor',
+        NEW.id,
+        CONCAT('{"titulo_profesional":"', IFNULL(OLD.titulo_profesional, ''), '","sector_asignado":"', IFNULL(OLD.sector_asignado, ''), '"}'),
+        CONCAT('{"titulo_profesional":"', IFNULL(NEW.titulo_profesional, ''), '","sector_asignado":"', IFNULL(NEW.sector_asignado, ''), '"}'),
+        @ip_origen
+    );
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -581,7 +672,8 @@ INSERT INTO `profesor` (`id`, `persona_id`, `titulo_profesional`, `fecha_ingreso
 (1, 3, 'Profesor de Educación Física', '2010-03-01', 'Lunes 14:00-16:00'),
 (2, 4, 'Licenciado en Educación Física', '2012-08-15', 'Martes 15:00-17:00'),
 (3, 5, 'Doctor en Ciencias del Deporte', '2015-02-10', 'Miércoles 16:00-18:00'),
-(4, 10, 'Tec. Sup. Desarrollo de Software', '2025-05-11', '3hs Lunes a Viernes 17hs a 19hs');
+(4, 10, 'Tec. Sup. Desarrollo de Software', '2025-05-11', '3hs Lunes a Viernes 17hs a 19hs'),
+(5, 11, 'Profesorado en Literatura', '2055-05-22', 'Martes 13 a 16hs');
 
 -- --------------------------------------------------------
 
@@ -603,18 +695,13 @@ CREATE TABLE `profesor_materia` (
 
 INSERT INTO `profesor_materia` (`id`, `profesor_id`, `materia_id`, `curso_id`, `ciclo_lectivo`) VALUES
 (1, 1, 1, 1, 2023),
-(2, 1, 1, 2, 2023),
-(7, 1, 4, 1, 2023),
 (8, 1, 4, 2, 2023),
-(3, 2, 2, 1, 2023),
 (4, 2, 2, 2, 2023),
 (9, 2, 5, 3, 2023),
-(10, 2, 5, 4, 2023),
 (5, 3, 3, 1, 2023),
 (6, 3, 3, 2, 2023),
 (11, 3, 6, 3, 2023),
-(12, 3, 6, 4, 2023),
-(13, 4, 2, 3, 2023);
+(12, 3, 6, 4, 2023);
 
 -- --------------------------------------------------------
 
@@ -629,24 +716,27 @@ CREATE TABLE `usuario` (
   `tipo` enum('administrador','preceptor','profesor','alumno') NOT NULL,
   `ultimo_acceso` datetime DEFAULT NULL,
   `activo` tinyint(1) DEFAULT 1,
-  `fecha_creacion` datetime DEFAULT current_timestamp()
+  `primer_acceso` tinyint(1) DEFAULT 1,
+  `fecha_creacion` datetime DEFAULT current_timestamp(),
+  `debe_cambiar_password` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Volcado de datos para la tabla `usuario`
 --
 
-INSERT INTO `usuario` (`id`, `username`, `password`, `tipo`, `ultimo_acceso`, `activo`, `fecha_creacion`) VALUES
-(1, 'admin1', '$2y$10$2sAVzqlFTRicsYIz/GRHS.fNkV936nDflh8o2a2eBlK2ciip6bz6.', 'administrador', NULL, 1, '2025-05-09 10:57:02'),
-(2, 'preceptor1', '$2y$10$NTdQX9nzZHZbtSQwoLNqM.HBOc3kGaHacdI4aNXcJA/tlsGK0WSCa', 'preceptor', NULL, 1, '2025-05-09 10:57:02'),
-(3, 'prof1', '$2y$10$KS1RDrBMekzTGNWuSMhgmOyIb5DO4PIEIWjlFOVx/0le4if33.Q5y', 'profesor', NULL, 1, '2025-05-09 10:57:02'),
-(4, 'prof2', '$2y$10$DTJHj83S5SoYtCtlYcmybeID8bDgh4mOlUKECdC/TDUfmzL5TKjn.', 'profesor', NULL, 1, '2025-05-09 10:57:02'),
-(5, 'prof3', '$2y$10$ZiXBSX1IHrJauSMUOc8g2e/LRMGCRO//tG77XAlEefWMmjb8E3E5O', 'profesor', NULL, 1, '2025-05-09 10:57:02'),
-(6, 'alum1', '$2y$10$Dgyf5NloslClvIFnajy4FeNpu//9gjuUD/UkL3WBsXX.CwEIoXys2', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
-(7, 'alum2', '$2y$10$uKGDnS8s2kb1iH8pjsUHjeytHYtdTspKEeQam24fBBxkXfngwq03G', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
-(8, 'alum3', '$2y$10$2fKYu1IIvwX/vdiFSgbB.e9rAfKshNNuY0dopEj9u05Fk0uJrtmOe', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
-(9, 'alum4', '$2y$10$TJnMP0KNK6UmeocPIs9Vr.Nb37wT1QuoPf0iMJnKlwnuWrGk9bcQq', 'alumno', NULL, 1, '2025-05-09 10:57:02'),
-(11, 'hrodriguez', '$2y$10$.erd5F21E6lta8SlxdDSoeGX9cl91UiRD/DwWXDBuydoTJZeEWSRC', 'profesor', NULL, 1, '2025-05-12 00:15:53');
+INSERT INTO `usuario` (`id`, `username`, `password`, `tipo`, `ultimo_acceso`, `activo`, `primer_acceso`, `fecha_creacion`, `debe_cambiar_password`) VALUES
+(1, 'admin1', '$2y$10$2sAVzqlFTRicsYIz/GRHS.fNkV936nDflh8o2a2eBlK2ciip6bz6.', 'administrador', '2025-05-22 18:26:11', 1, 0, '2025-05-09 10:57:02', 0),
+(2, 'preceptor1', '$2y$10$NTdQX9nzZHZbtSQwoLNqM.HBOc3kGaHacdI4aNXcJA/tlsGK0WSCa', 'preceptor', '2025-05-22 13:03:04', 1, 1, '2025-05-09 10:57:02', 1),
+(3, 'prof1', '$2y$10$KS1RDrBMekzTGNWuSMhgmOyIb5DO4PIEIWjlFOVx/0le4if33.Q5y', 'profesor', NULL, 1, 1, '2025-05-09 10:57:02', 1),
+(4, 'prof2', '$2y$10$DTJHj83S5SoYtCtlYcmybeID8bDgh4mOlUKECdC/TDUfmzL5TKjn.', 'profesor', NULL, 1, 1, '2025-05-09 10:57:02', 1),
+(5, 'prof3', '$2y$10$ZiXBSX1IHrJauSMUOc8g2e/LRMGCRO//tG77XAlEefWMmjb8E3E5O', 'profesor', NULL, 1, 1, '2025-05-09 10:57:02', 1),
+(6, 'alum1', '$2y$10$Dgyf5NloslClvIFnajy4FeNpu//9gjuUD/UkL3WBsXX.CwEIoXys2', 'alumno', '2025-05-22 18:26:04', 1, 1, '2025-05-09 10:57:02', 1),
+(7, 'alum2', '$2y$10$uKGDnS8s2kb1iH8pjsUHjeytHYtdTspKEeQam24fBBxkXfngwq03G', 'alumno', NULL, 1, 1, '2025-05-09 10:57:02', 1),
+(8, 'alum3', '$2y$10$2fKYu1IIvwX/vdiFSgbB.e9rAfKshNNuY0dopEj9u05Fk0uJrtmOe', 'alumno', NULL, 1, 1, '2025-05-09 10:57:02', 1),
+(9, 'alum4', '$2y$10$TJnMP0KNK6UmeocPIs9Vr.Nb37wT1QuoPf0iMJnKlwnuWrGk9bcQq', 'alumno', NULL, 1, 1, '2025-05-09 10:57:02', 1),
+(11, 'hrodriguez', '$2y$10$GBWiOb185hHBXmYPrZn7geS3jq/gc9zbtI/FgAOFzmMYhCj3QCmUO', 'profesor', '2025-05-22 13:02:28', 1, 1, '2025-05-12 00:15:53', 0),
+(12, 'ljuan', '$2y$10$p9KYNsIZMDdVR9xASpWRIepaDYR8i6HnxhhHZc80SCyx6KPfvV.Hq', 'profesor', NULL, 1, 1, '2025-05-22 11:26:43', 1);
 
 -- --------------------------------------------------------
 
@@ -730,6 +820,27 @@ CREATE TABLE `vista_personas` (
 -- --------------------------------------------------------
 
 --
+-- Estructura Stand-in para la vista `vista_preceptores`
+-- (Véase abajo para la vista actual)
+--
+CREATE TABLE `vista_preceptores` (
+`preceptor_id` int(11)
+,`apellidos` varchar(100)
+,`nombres` varchar(100)
+,`dni` varchar(15)
+,`titulo_profesional` varchar(255)
+,`fecha_ingreso` date
+,`sector_asignado` varchar(100)
+,`celular` varchar(20)
+,`domicilio` varchar(255)
+,`contacto_emergencia` varchar(255)
+,`username` varchar(50)
+,`activo` tinyint(1)
+);
+
+-- --------------------------------------------------------
+
+--
 -- Estructura Stand-in para la vista `vista_profesores`
 -- (Véase abajo para la vista actual)
 --
@@ -802,6 +913,15 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 DROP TABLE IF EXISTS `vista_personas`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_personas`  AS SELECT `p`.`id` AS `id`, `p`.`dni` AS `dni`, `p`.`apellidos` AS `apellidos`, `p`.`nombres` AS `nombres`, `p`.`fecha_nacimiento` AS `fecha_nacimiento`, `p`.`celular` AS `celular`, `p`.`domicilio` AS `domicilio`, `p`.`contacto_emergencia` AS `contacto_emergencia`, `u`.`username` AS `username`, `u`.`tipo` AS `tipo`, `u`.`activo` AS `activo` FROM (`persona` `p` join `usuario` `u` on(`p`.`usuario_id` = `u`.`id`)) ;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura para la vista `vista_preceptores`
+--
+DROP TABLE IF EXISTS `vista_preceptores`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `vista_preceptores`  AS SELECT `p`.`id` AS `preceptor_id`, `pers`.`apellidos` AS `apellidos`, `pers`.`nombres` AS `nombres`, `pers`.`dni` AS `dni`, `p`.`titulo_profesional` AS `titulo_profesional`, `p`.`fecha_ingreso` AS `fecha_ingreso`, `p`.`sector_asignado` AS `sector_asignado`, `pers`.`celular` AS `celular`, `pers`.`domicilio` AS `domicilio`, `pers`.`contacto_emergencia` AS `contacto_emergencia`, `u`.`username` AS `username`, `u`.`activo` AS `activo` FROM ((`preceptor` `p` join `persona` `pers` on(`p`.`persona_id` = `pers`.`id`)) join `usuario` `u` on(`pers`.`usuario_id` = `u`.`id`)) ;
 
 -- --------------------------------------------------------
 
@@ -956,6 +1076,14 @@ ALTER TABLE `persona`
   ADD KEY `idx_apellidos_nombres` (`apellidos`,`nombres`);
 
 --
+-- Indices de la tabla `preceptor`
+--
+ALTER TABLE `preceptor`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `persona_id` (`persona_id`),
+  ADD KEY `idx_sector_asignado` (`sector_asignado`);
+
+--
 -- Indices de la tabla `profesor`
 --
 ALTER TABLE `profesor`
@@ -1002,7 +1130,7 @@ ALTER TABLE `alumno`
 -- AUTO_INCREMENT de la tabla `asistencia`
 --
 ALTER TABLE `asistencia`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT de la tabla `auditoria`
@@ -1062,13 +1190,19 @@ ALTER TABLE `materia`
 -- AUTO_INCREMENT de la tabla `persona`
 --
 ALTER TABLE `persona`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT de la tabla `preceptor`
+--
+ALTER TABLE `preceptor`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `profesor`
 --
 ALTER TABLE `profesor`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT de la tabla `profesor_materia`
@@ -1080,7 +1214,7 @@ ALTER TABLE `profesor_materia`
 -- AUTO_INCREMENT de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Restricciones para tablas volcadas
@@ -1160,6 +1294,12 @@ ALTER TABLE `licencia_profesor`
 --
 ALTER TABLE `persona`
   ADD CONSTRAINT `persona_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`) ON DELETE CASCADE;
+
+--
+-- Filtros para la tabla `preceptor`
+--
+ALTER TABLE `preceptor`
+  ADD CONSTRAINT `preceptor_ibfk_1` FOREIGN KEY (`persona_id`) REFERENCES `persona` (`id`) ON DELETE CASCADE;
 
 --
 -- Filtros para la tabla `profesor`

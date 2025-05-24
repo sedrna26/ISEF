@@ -4,7 +4,7 @@ session_start();
 
 // Verificar que el usuario esté logueado
 if (!isset($_SESSION['usuario_id'])) {
-    header("Location: index.php");
+    header("Location: ../index.php");
     exit;
 }
 
@@ -27,11 +27,15 @@ $stmt->bind_param("i", $_SESSION['usuario_id']);
 $stmt->execute();
 $result = $stmt->get_result();
 $usuario = $result->fetch_assoc();
+if (!$usuario['debe_cambiar_password']) { // Si es FALSE (o sea, 0, no debe cambiar)
+    header("Location: dashboard.php"); // Redirige al dashboard dentro de la carpeta views/ [cite: 149, 150]
+    exit;
+}
 $stmt->close();
 
 // Si no debe cambiar contraseña, redirigir al dashboard
 if (!$usuario['debe_cambiar_password']) {
-    header("Location: ./views/dashboard.php");
+    header("Location: dashboard.php");
     exit;
 }
 
@@ -58,26 +62,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (password_verify($password_actual, $user_data['password'])) {
             // Cambiar la contraseña
             $nueva_password_hash = password_hash($nueva_password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("UPDATE usuario SET password = ?, debe_cambiar_password = FALSE WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE usuario SET password = ?, debe_cambiar_password = 0 WHERE id = ?");
             $stmt->bind_param("si", $nueva_password_hash, $_SESSION['usuario_id']);
             
             if ($stmt->execute()) {
                 $stmt->close();
-                $mensaje = "Contraseña cambiada exitosamente. Será redirigido al sistema.";
-                // Redirigir después de 3 segundos
-                echo "<script>
-                    setTimeout(function() {
-                        window.location.href = 'views/dashboard.php';
-                    }, 3000);
-                </script>";
+                
+                // Registrar cambio exitoso en sesión para mostrar en dashboard
+                $_SESSION['mensaje'] = "Contraseña cambiada exitosamente.";
+                
+                // Redirigir al dashboard
+                header("Location: dashboard.php");
+                exit;
             } else {
-                $error = "Error al cambiar la contraseña.";
+                $error = "Error al cambiar la contraseña: " . $conn->error;
+                $stmt->close();
             }
         } else {
             $error = "La contraseña actual es incorrecta.";
         }
     }
 }
+
+$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -178,6 +185,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #666;
             margin-top: 5px;
         }
+        .logout-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .logout-link a {
+            color: #dc3545;
+            text-decoration: none;
+        }
+        .logout-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -219,6 +237,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <button type="submit">Cambiar Contraseña</button>
         </form>
+        
+        <div class="logout-link">
+            <a href="../index.php?logout=1">Cerrar sesión</a>
+        </div>
     </div>
     
     <script>
