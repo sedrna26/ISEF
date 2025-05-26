@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 23-05-2025 a las 01:53:20
+-- Tiempo de generación: 26-05-2025 a las 17:41:44
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -192,7 +192,10 @@ INSERT INTO `alumno` (`id`, `persona_id`, `legajo`, `fecha_ingreso`, `cohorte`) 
 (1, 6, '12345', '2022-03-01', 2022),
 (2, 7, '12346', '2022-03-01', 2022),
 (3, 8, '12347', '2023-03-01', 2023),
-(4, 9, '12348', '2023-03-01', 2023);
+(4, 9, '12348', '2023-03-01', 2023),
+(5, 12, '', '0000-00-00', 2025),
+(6, 14, '2113', '0000-00-00', 2024),
+(8, 17, '2114', '0000-00-00', 2025);
 
 -- --------------------------------------------------------
 
@@ -236,7 +239,9 @@ INSERT INTO `asistencia` (`id`, `inscripcion_cursado_id`, `fecha`, `estado`, `pr
 (21, 4, '2025-05-22', 'Presente', 1),
 (22, 8, '2025-05-22', 'Justificado', 1),
 (23, 2, '2025-05-22', 'Presente', 1),
-(24, 6, '2025-05-22', 'Presente', 1);
+(24, 6, '2025-05-22', 'Presente', 1),
+(26, 12, '2025-05-24', 'Presente', 1),
+(29, 4, '2025-05-01', 'Presente', 1);
 
 -- --------------------------------------------------------
 
@@ -266,7 +271,19 @@ INSERT INTO `auditoria` (`id`, `usuario_id`, `fecha_hora`, `tipo_operacion`, `ta
 (3, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '3', NULL, '{\"nota\":9,\"nota_letra\":\"Distinguido\"}', '192.168.1.100'),
 (4, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '4', NULL, '{\"nota\":7,\"nota_letra\":\"Bueno\"}', '192.168.1.100'),
 (5, 1, '2025-05-09 10:57:02', 'UPDATE', 'evaluacion', '3', '{\"nota\":9,\"nota_letra\":\"Distinguido\"}', '{\"nota\":9,\"nota_letra\":\"Sobresaliente\"}', '192.168.1.100'),
-(6, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '5', NULL, '{\"nota\":8,\"nota_letra\":\"Muy Bueno\"}', '192.168.1.100');
+(6, 1, '2025-05-09 10:57:02', 'INSERT', 'evaluacion', '5', NULL, '{\"nota\":8,\"nota_letra\":\"Muy Bueno\"}', '192.168.1.100'),
+(7, NULL, '2025-05-24 13:43:04', 'INSERT', 'evaluacion', '6', NULL, '{\"nota\":10,\"nota_letra\":\"\"}', NULL),
+(8, NULL, '2025-05-24 13:43:04', 'INSERT', 'evaluacion', '7', NULL, '{\"nota\":10,\"nota_letra\":\"\"}', NULL),
+(9, NULL, '2025-05-24 13:43:04', 'INSERT', 'evaluacion', '8', NULL, '{\"nota\":8,\"nota_letra\":\"\"}', NULL),
+(10, NULL, '2025-05-24 13:43:04', 'UPDATE', 'evaluacion', '6', '{\"nota\":10,\"nota_letra\":\"\"}', '{\"nota\":6,\"nota_letra\":\"\"}', NULL),
+(11, NULL, '2025-05-24 13:43:04', 'INSERT', 'evaluacion', '9', NULL, '{\"nota\":5,\"nota_letra\":\"\"}', NULL),
+(12, NULL, '2025-05-24 13:43:04', 'INSERT', 'evaluacion', '10', NULL, '{\"nota\":10,\"nota_letra\":\"\"}', NULL),
+(13, NULL, '2025-05-24 13:43:39', 'INSERT', 'evaluacion', '11', NULL, '{\"nota\":10,\"nota_letra\":\"\"}', NULL),
+(14, NULL, '2025-05-24 13:43:39', 'UPDATE', 'evaluacion', '7', '{\"nota\":10,\"nota_letra\":\"\"}', '{\"nota\":10,\"nota_letra\":\"\"}', NULL),
+(15, NULL, '2025-05-24 13:43:39', 'UPDATE', 'evaluacion', '8', '{\"nota\":8,\"nota_letra\":\"\"}', '{\"nota\":8,\"nota_letra\":\"\"}', NULL),
+(16, NULL, '2025-05-24 13:43:39', 'UPDATE', 'evaluacion', '6', '{\"nota\":6,\"nota_letra\":\"\"}', '{\"nota\":6,\"nota_letra\":\"\"}', NULL),
+(17, NULL, '2025-05-24 13:43:39', 'UPDATE', 'evaluacion', '9', '{\"nota\":5,\"nota_letra\":\"\"}', '{\"nota\":5,\"nota_letra\":\"\"}', NULL),
+(18, NULL, '2025-05-24 13:43:39', 'UPDATE', 'evaluacion', '10', '{\"nota\":10,\"nota_letra\":\"\"}', '{\"nota\":10,\"nota_letra\":\"\"}', NULL);
 
 -- --------------------------------------------------------
 
@@ -367,7 +384,13 @@ INSERT INTO `evaluacion` (`id`, `inscripcion_cursado_id`, `tipo`, `instancia`, `
 (2, 7, 'Parcial', '1°Cuatrimestre', '2023-06-15', 4, 'Aprobado', 3, 'Desempeño satisfactorio'),
 (3, 11, 'Parcial', '1°Cuatrimestre', '2023-06-15', 9, 'Sobresaliente', 3, 'Excelente desempeño'),
 (4, 15, 'Parcial', '1°Cuatrimestre', '2023-06-15', 7, 'Bueno', 3, 'Desempeño satisfactorio'),
-(5, 3, 'Final', '1°Cuatrimestre', '2023-07-20', 8, 'Muy Bueno', 3, 'Aprobado');
+(5, 3, 'Final', '1°Cuatrimestre', '2023-07-20', 8, 'Muy Bueno', 3, 'Aprobado'),
+(6, 1, 'Parcial', '1°Cuatrimestre', '2025-05-24', 6, '', 1, ''),
+(7, 1, 'Parcial', '1°Cuatrimestre', '2025-05-24', 10, '', 1, 'Práctico 2. '),
+(8, 1, 'Parcial', '1°Cuatrimestre', '2025-05-24', 8, '', 1, 'Práctico 3. '),
+(9, 1, 'Parcial', '2°Cuatrimestre', '2025-05-24', 5, '', 1, ''),
+(10, 1, 'Coloquio', 'Anual', '2025-05-24', 10, '', 1, 'Trabajo de Campo. '),
+(11, 1, 'Parcial', '1°Cuatrimestre', '2025-05-24', 10, '', 1, 'Práctico 1. ');
 
 --
 -- Disparadores `evaluacion`
@@ -564,7 +587,11 @@ INSERT INTO `persona` (`id`, `usuario_id`, `apellidos`, `nombres`, `dni`, `fecha
 (8, 8, 'Díaz', 'Lucía', '32345678', '2002-06-18', '3518901234', 'Dirección 415', 'Contacto de emergencia', NULL),
 (9, 9, 'Pérez', 'Daniel', '33456789', '2003-09-22', '3519012345', 'Dirección 516', 'Contacto de emergencia', NULL),
 (10, 11, 'Rodriguez ', 'Horacio Andres', '42154777', '2000-11-26', '2644748596', 'Tucuman Sur ', 'Marcos Acuña - 264452512', NULL),
-(11, 12, 'Juan', 'Lopez', '20412541', '1966-05-22', '2641254125', 'Alvear Sur', '2644748512', NULL);
+(11, 12, 'Juan', 'Lopez', '20412541', '1966-05-22', '2641254125', 'Alvear Sur', '2644748512', NULL),
+(12, 13, 'Alvaro', 'Lopez', '38874658', '1990-11-16', '1111111', '1111111', '', NULL),
+(14, 15, 'Estebanez', 'Dario', '38874659', '1994-11-11', '2641254125', 'Alvear Sur', '264452512', NULL),
+(15, 16, 'Romero Ruiz', 'Lucas Ariel', '42154776', '1989-05-23', '2641254125', 'Alvear Sur', '2644748512', NULL),
+(17, 18, 'Rodriguez ', 'Dario', '38874660', '2001-12-12', '2641254125', 'Alvear Sur', 'Marcos Acuña - 264452512', NULL);
 
 -- --------------------------------------------------------
 
@@ -673,7 +700,8 @@ INSERT INTO `profesor` (`id`, `persona_id`, `titulo_profesional`, `fecha_ingreso
 (2, 4, 'Licenciado en Educación Física', '2012-08-15', 'Martes 15:00-17:00'),
 (3, 5, 'Doctor en Ciencias del Deporte', '2015-02-10', 'Miércoles 16:00-18:00'),
 (4, 10, 'Tec. Sup. Desarrollo de Software', '2025-05-11', '3hs Lunes a Viernes 17hs a 19hs'),
-(5, 11, 'Profesorado en Literatura', '2055-05-22', 'Martes 13 a 16hs');
+(5, 11, 'Profesorado en Literatura', '2055-05-22', 'Martes 13 a 16hs'),
+(6, 15, '', '0000-00-00', 'Martes 8 - 12hs');
 
 -- --------------------------------------------------------
 
@@ -726,17 +754,21 @@ CREATE TABLE `usuario` (
 --
 
 INSERT INTO `usuario` (`id`, `username`, `password`, `tipo`, `ultimo_acceso`, `activo`, `primer_acceso`, `fecha_creacion`, `debe_cambiar_password`) VALUES
-(1, 'admin1', '$2y$10$2sAVzqlFTRicsYIz/GRHS.fNkV936nDflh8o2a2eBlK2ciip6bz6.', 'administrador', '2025-05-22 18:26:11', 1, 0, '2025-05-09 10:57:02', 0),
-(2, 'preceptor1', '$2y$10$NTdQX9nzZHZbtSQwoLNqM.HBOc3kGaHacdI4aNXcJA/tlsGK0WSCa', 'preceptor', '2025-05-22 13:03:04', 1, 1, '2025-05-09 10:57:02', 1),
-(3, 'prof1', '$2y$10$KS1RDrBMekzTGNWuSMhgmOyIb5DO4PIEIWjlFOVx/0le4if33.Q5y', 'profesor', NULL, 1, 1, '2025-05-09 10:57:02', 1),
+(1, 'admin1', '$2y$10$2sAVzqlFTRicsYIz/GRHS.fNkV936nDflh8o2a2eBlK2ciip6bz6.', 'administrador', '2025-05-26 11:57:10', 1, 0, '2025-05-09 10:57:02', 0),
+(2, 'preceptor1', '$2y$10$Tw2MO3cYlcpTSi3ECVSvWOim0HU.CiGyZWH5q1uUWFJug0P9s4yzW', 'preceptor', '2025-05-26 07:42:14', 1, 1, '2025-05-09 10:57:02', 0),
+(3, 'prof1', '$2y$10$W8FsIhGw50N92w7ZRjJl0O.i7RTGR2c8RHvVKUyZmISXxfUe3oqkC', 'profesor', '2025-05-26 11:10:19', 1, 1, '2025-05-09 10:57:02', 0),
 (4, 'prof2', '$2y$10$DTJHj83S5SoYtCtlYcmybeID8bDgh4mOlUKECdC/TDUfmzL5TKjn.', 'profesor', NULL, 1, 1, '2025-05-09 10:57:02', 1),
 (5, 'prof3', '$2y$10$ZiXBSX1IHrJauSMUOc8g2e/LRMGCRO//tG77XAlEefWMmjb8E3E5O', 'profesor', NULL, 1, 1, '2025-05-09 10:57:02', 1),
-(6, 'alum1', '$2y$10$Dgyf5NloslClvIFnajy4FeNpu//9gjuUD/UkL3WBsXX.CwEIoXys2', 'alumno', '2025-05-22 18:26:04', 1, 1, '2025-05-09 10:57:02', 1),
+(6, 'alum1', '$2y$10$DuuMqTy0sT369LQ6sd9e3ufOLwC12R.4SpHw2Xkwc6CFJwADTiQKa', 'alumno', '2025-05-22 23:32:28', 1, 1, '2025-05-09 10:57:02', 0),
 (7, 'alum2', '$2y$10$uKGDnS8s2kb1iH8pjsUHjeytHYtdTspKEeQam24fBBxkXfngwq03G', 'alumno', NULL, 1, 1, '2025-05-09 10:57:02', 1),
 (8, 'alum3', '$2y$10$2fKYu1IIvwX/vdiFSgbB.e9rAfKshNNuY0dopEj9u05Fk0uJrtmOe', 'alumno', NULL, 1, 1, '2025-05-09 10:57:02', 1),
 (9, 'alum4', '$2y$10$TJnMP0KNK6UmeocPIs9Vr.Nb37wT1QuoPf0iMJnKlwnuWrGk9bcQq', 'alumno', NULL, 1, 1, '2025-05-09 10:57:02', 1),
-(11, 'hrodriguez', '$2y$10$GBWiOb185hHBXmYPrZn7geS3jq/gc9zbtI/FgAOFzmMYhCj3QCmUO', 'profesor', '2025-05-22 13:02:28', 1, 1, '2025-05-12 00:15:53', 0),
-(12, 'ljuan', '$2y$10$p9KYNsIZMDdVR9xASpWRIepaDYR8i6HnxhhHZc80SCyx6KPfvV.Hq', 'profesor', NULL, 1, 1, '2025-05-22 11:26:43', 1);
+(11, 'hrodriguez', '$2y$10$GBWiOb185hHBXmYPrZn7geS3jq/gc9zbtI/FgAOFzmMYhCj3QCmUO', 'profesor', '2025-05-24 12:46:33', 1, 1, '2025-05-12 00:15:53', 0),
+(12, 'ljuan', '$2y$10$p9KYNsIZMDdVR9xASpWRIepaDYR8i6HnxhhHZc80SCyx6KPfvV.Hq', 'profesor', NULL, 1, 1, '2025-05-22 11:26:43', 1),
+(13, 'lalvaro', '$2y$10$.OqBPWdYsHDEASpgl5LyM.SKTTvfIcPWDPrHt0ieJd438IhDiYa52', 'alumno', '2025-05-22 23:27:39', 1, 1, '2025-05-22 21:36:20', 0),
+(15, 'destebanez', '$2y$10$nI0hYAe9IkV/TPrcGL3Svu9kwRKzII3PXK7Wh1DBB7l.YfMOlGV56', 'alumno', '2025-05-23 00:57:29', 1, 1, '2025-05-22 23:34:49', 0),
+(16, 'lromeroruiz', '$2y$10$Cvoufvp8STq4yt9xNRQ7/uTrS6OYzqmlTdhYFXZYksxRhbzIBO.NG', 'profesor', '2025-05-23 08:35:13', 1, 1, '2025-05-23 08:34:59', 0),
+(18, 'drodriguez', '$2y$10$A7aD4OghzhJZs2VhEc710OeIfMnIzb6LLtkDowGd67aX.5pciBiOq', 'alumno', '2025-05-23 08:44:21', 1, 1, '2025-05-23 08:43:40', 1);
 
 -- --------------------------------------------------------
 
@@ -1124,19 +1156,19 @@ ALTER TABLE `acta_examen`
 -- AUTO_INCREMENT de la tabla `alumno`
 --
 ALTER TABLE `alumno`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `asistencia`
 --
 ALTER TABLE `asistencia`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT de la tabla `auditoria`
 --
 ALTER TABLE `auditoria`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT de la tabla `certificacion`
@@ -1160,7 +1192,7 @@ ALTER TABLE `curso`
 -- AUTO_INCREMENT de la tabla `evaluacion`
 --
 ALTER TABLE `evaluacion`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `inscripcion_cursado`
@@ -1190,7 +1222,7 @@ ALTER TABLE `materia`
 -- AUTO_INCREMENT de la tabla `persona`
 --
 ALTER TABLE `persona`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT de la tabla `preceptor`
@@ -1202,7 +1234,7 @@ ALTER TABLE `preceptor`
 -- AUTO_INCREMENT de la tabla `profesor`
 --
 ALTER TABLE `profesor`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `profesor_materia`
@@ -1214,7 +1246,7 @@ ALTER TABLE `profesor_materia`
 -- AUTO_INCREMENT de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- Restricciones para tablas volcadas

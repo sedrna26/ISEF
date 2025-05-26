@@ -11,13 +11,20 @@ if ($mysqli->connect_errno) {
     die("Fallo la conexión: " . $mysqli->connect_error);
 }
 
-// Procesar creación o eliminación de correlatividades
+// Procesar creación, modificación o eliminación de correlatividades
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($_POST['accion'] === 'crear') {
         $stmt = $mysqli->prepare("INSERT INTO correlatividad (materia_id, materia_correlativa_id, tipo) VALUES (?, ?, ?)");
         $stmt->bind_param("iis", $_POST['materia_id'], $_POST['materia_correlativa_id'], $_POST['tipo']);
         $stmt->execute();
         $stmt->close();
+    } elseif ($_POST['accion'] === 'modificar') { // <<< NUEVO BLOQUE IF
+        if (isset($_POST['edit_correlatividad_id'], $_POST['materia_id'], $_POST['materia_correlativa_id'], $_POST['tipo']) && !empty($_POST['edit_correlatividad_id'])) {
+            $stmt = $mysqli->prepare("UPDATE correlatividad SET materia_id = ?, materia_correlativa_id = ?, tipo = ? WHERE id = ?");
+            $stmt->bind_param("iisi", $_POST['materia_id'], $_POST['materia_correlativa_id'], $_POST['tipo'], $_POST['edit_correlatividad_id']);
+            $stmt->execute();
+            $stmt->close();
+        }
     } elseif ($_POST['accion'] === 'eliminar') {
         $stmt = $mysqli->prepare("DELETE FROM correlatividad WHERE id = ?");
         $stmt->bind_param("i", $_POST['correlatividad_id']);
@@ -30,8 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Obtener datos necesarios
 $correlatividades = $mysqli->query("
-    SELECT c.id as correlatividad_id, 
-           m1.nombre as materia_nombre, 
+    SELECT c.id as correlatividad_id,
+           m1.id as materia_id_actual,
+           m1.nombre as materia_nombre,
+           m2.id as materia_correlativa_id_actual, 
            m2.nombre as materia_correlativa_nombre,
            c.tipo
     FROM correlatividad c
@@ -39,7 +48,6 @@ $correlatividades = $mysqli->query("
     JOIN materia m2 ON c.materia_correlativa_id = m2.id
     ORDER BY m1.nombre, m2.nombre
 ");
-
 $materias = $mysqli->query("SELECT id, nombre FROM materia ORDER BY nombre");
 ?>
 
@@ -60,47 +68,55 @@ $materias = $mysqli->query("SELECT id, nombre FROM materia ORDER BY nombre");
     <h1>Gestión de Correlatividades</h1>
     <a href="dashboard.php">&laquo; Volver al menú</a>
 
-    <h2>Nueva Correlatividad</h2>
-    <form method="post">
-        <input type="hidden" name="accion" value="crear">
-        
-        <div class="form-group">
-            <label>Materia:
-                <select name="materia_id" required>
-                    <option value="">-- Seleccione Materia --</option>
-                    <?php while ($m = $materias->fetch_assoc()): ?>
-                        <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nombre']) ?></option>
-                    <?php endwhile; ?>
-                </select>
-            </label>
-        </div>
-        
-        <div class="form-group">
-            <label>Materia Correlativa:
-                <select name="materia_correlativa_id" required>
-                    <option value="">-- Seleccione Materia Correlativa --</option>
-                    <?php 
-                    $materias->data_seek(0); // Reiniciar el puntero del resultado
-                    while ($m = $materias->fetch_assoc()): ?>
-                        <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nombre']) ?></option>
-                    <?php endwhile; ?>
-                </select>
-            </label>
-        </div>
-        
-        <div class="form-group">
-            <label>Tipo de Correlatividad:
-                <select name="tipo" required>
-                    <option value="regular">Regular</option>
-                    <option value="aprobada">Aprobada</option>
-                    <option value="cursada">Cursada</option>
-                </select>
-            </label>
-        </div>
-        
-        <button type="submit">Crear Correlatividad</button>
-    </form>
+    <h2 id="formCorrelatividadTitulo">Nueva Correlatividad</h2>
+<form method="post" id="formGestionCorrelatividad">
+    <input type="hidden" name="accion" value="crear">
+    <input type="hidden" name="edit_correlatividad_id" id="edit_correlatividad_id" value=""> 
 
+    <div class="form-group">
+        <label>Materia:
+            <select name="materia_id" required>
+                <option value="">-- Seleccione Materia --</option>
+                <?php
+                // Asegurarse de que $materias se puede usar aquí de nuevo si es necesario, o clonar el resultado
+                $materias->data_seek(0); // Reiniciar por si acaso
+                while ($m = $materias->fetch_assoc()): ?>
+                    <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nombre']) ?></option>
+                <?php endwhile; ?>
+            </select>
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label>Materia Correlativa:
+            <select name="materia_correlativa_id" required>
+                <option value="">-- Seleccione Materia Correlativa --</option>
+                <?php
+                $materias->data_seek(0); // Reiniciar el puntero del resultado
+                while ($m = $materias->fetch_assoc()): ?>
+                    <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nombre']) ?></option>
+                <?php endwhile; ?>
+            </select>
+        </label>
+    </div>
+
+    <div class="form-group">
+        <label>Tipo de Correlatividad:
+            <select name="tipo" required>
+                <option value="regular">Regular</option>
+                <option value="aprobada">Aprobada</option>
+                <option value="cursada">Cursada</option>
+                 {/* Nuevos tipos según tabla `correlatividad` en bd_isef.txt */}
+                <option value="Para cursar regularizada">Para cursar regularizada</option> {/* [cite: 111] */}
+                <option value="Para cursar acreditada">Para cursar acreditada</option> {/* [cite: 111] */}
+                <option value="Para acreditar">Para acreditar</option> {/* [cite: 111] */}
+            </select>
+        </label>
+    </div>
+
+    <button type="submit">Crear Correlatividad</button>
+    <button type="button" id="cancelarEdicionBtnCorrelatividad" onclick="cancelarEdicionCorrelatividad()" style="display:none; margin-left: 10px;">Cancelar Edición</button> 
+</form>
     <h2>Correlatividades Existentes</h2>
     <table>
         <thead>
@@ -118,6 +134,7 @@ $materias = $mysqli->query("SELECT id, nombre FROM materia ORDER BY nombre");
                     <td><?= htmlspecialchars($cor['materia_correlativa_nombre']) ?></td>
                     <td><?= htmlspecialchars(ucfirst($cor['tipo'])) ?></td>
                     <td>
+                        <button type="button" class="btn-editar" onclick="prepararEdicionCorrelatividad(<?= $cor['correlatividad_id'] ?>, <?= $cor['materia_id_actual'] ?>, <?= $cor['materia_correlativa_id_actual'] ?>, '<?= htmlspecialchars($cor['tipo']) ?>')">Editar</button>
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="accion" value="eliminar">
                             <input type="hidden" name="correlatividad_id" value="<?= $cor['correlatividad_id'] ?>">
@@ -129,4 +146,32 @@ $materias = $mysqli->query("SELECT id, nombre FROM materia ORDER BY nombre");
         </tbody>
     </table>
 </body>
+<script>
+function prepararEdicionCorrelatividad(id, materiaId, materiaCorrelativaId, tipo) {
+    const form = document.getElementById('formGestionCorrelatividad');
+    form.querySelector('input[name="accion"]').value = 'modificar';
+    form.querySelector('input[name="edit_correlatividad_id"]').value = id;
+    form.querySelector('select[name="materia_id"]').value = materiaId;
+    form.querySelector('select[name="materia_correlativa_id"]').value = materiaCorrelativaId;
+    form.querySelector('select[name="tipo"]').value = tipo;
+    form.querySelector('button[type="submit"]').textContent = 'Guardar Cambios';
+
+    document.getElementById('formCorrelatividadTitulo').textContent = 'Modificar Correlatividad';
+    document.getElementById('cancelarEdicionBtnCorrelatividad').style.display = 'inline';
+    
+    // Scroll to form for better UX
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cancelarEdicionCorrelatividad() {
+    const form = document.getElementById('formGestionCorrelatividad');
+    form.querySelector('input[name="accion"]').value = 'crear';
+    form.querySelector('input[name="edit_correlatividad_id"]').value = '';
+    form.reset(); // Limpia los campos del formulario
+    form.querySelector('button[type="submit"]').textContent = 'Crear Correlatividad';
+
+    document.getElementById('formCorrelatividadTitulo').textContent = 'Nueva Correlatividad';
+    document.getElementById('cancelarEdicionBtnCorrelatividad').style.display = 'none';
+}
+</script>
 </html>
