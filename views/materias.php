@@ -45,9 +45,11 @@ $materias = $mysqli->query("SELECT * FROM materia ORDER BY anio, nro_orden");
 </head>
 <body>
     <h2 id="formMateriaTitulo">Nueva Materia</h2>
+     <h1>Gestión de Cursos</h1>
+    <a href="dashboard.php">&laquo; Volver al menú</a>
 <form method="post" id="formGestionMateria">
     <input type="hidden" name="accion" value="crear">
-    <input type="hidden" name="edit_materia_id" id="edit_materia_id" value=""> {/* <<< AÑADIDO */}
+    <input type="hidden" name="edit_materia_id" id="edit_materia_id" value="">
     <label>Nro. Orden: <input type="number" name="nro_orden" required></label><br>
     <label>Código: <input type="text" name="codigo" required></label><br>
     <label>Nombre: <input type="text" name="nombre" required></label><br>
@@ -57,7 +59,7 @@ $materias = $mysqli->query("SELECT * FROM materia ORDER BY anio, nro_orden");
             <option value="Anual">Anual</option>
         </select>
     </label><br>
-    <label>Año: <input type="number" name="anio" min="1" required></label><br> {/* Añadido min="1" para mejor validación */}
+    <label>Año: <input type="number" name="anio" min="1" required></label><br> 
     <label>Cuatrimestre:
         <select name="cuatrimestre" required>
             <option value="1°">1°</option>
@@ -66,7 +68,7 @@ $materias = $mysqli->query("SELECT * FROM materia ORDER BY anio, nro_orden");
         </select>
     </label><br>
     <button type="submit">Crear Materia</button>
-    <button type="button" id="cancelarEdicionBtnMateria" onclick="cancelarEdicionMateria()" style="display:none; margin-left: 10px;">Cancelar Edición</button> {/* <<< AÑADIDO */}
+    <button type="button" id="cancelarEdicionBtnMateria" onclick="cancelarEdicionMateria()" style="display:none; margin-left: 10px;">Cancelar Edición</button> 
 </form>
 
     <h2>Listado de Materias</h2>
