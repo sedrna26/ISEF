@@ -76,58 +76,76 @@ $cursos = $mysqli->query("SELECT id, codigo, division, ciclo_lectivo FROM curso 
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Asignaciones Profesores - ISEF</title>
     <style>
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
+
 <body>
     <h1>Gestión de Asignaciones de Profesores</h1>
     <a href="dashboard.php">&laquo; Volver al menú</a>
 
     <h2 id="formAsignacionTitulo">Nueva Asignación</h2>
-<form method="post" id="formGestionAsignacion">
-    <input type="hidden" name="accion" value="asignar"> 
-    <input type="hidden" name="edit_asignacion_id" id="edit_asignacion_id" value=""> 
+    <form method="post" id="formGestionAsignacion">
+        <input type="hidden" name="accion" value="asignar">
+        <input type="hidden" name="edit_asignacion_id" id="edit_asignacion_id" value="">
 
-    <label>Profesor:
-        <select name="profesor_id" required>
-            <option value="">-- Seleccione Profesor --</option>
-            <?php while ($p = $profesores->fetch_assoc()): ?>
-                <option value="<?= $p['profesor_id'] ?>">
-                    <?= htmlspecialchars($p['apellidos'] . ', ' . $p['nombres']) ?>
-                </option>
-            <?php endwhile; $profesores->data_seek(0); // Reiniciar para posible uso futuro ?>
-        </select>
-    </label><br>
+        <label>Profesor:
+            <select name="profesor_id" required>
+                <option value="">-- Seleccione Profesor --</option>
+                <?php while ($p = $profesores->fetch_assoc()): ?>
+                    <option value="<?= $p['profesor_id'] ?>">
+                        <?= htmlspecialchars($p['apellidos'] . ', ' . $p['nombres']) ?>
+                    </option>
+                <?php endwhile;
+                $profesores->data_seek(0); // Reiniciar para posible uso futuro 
+                ?>
+            </select>
+        </label><br>
 
-    <label>Materia:
-        <select name="materia_id" required>
-            <option value="">-- Seleccione Materia --</option>
-            <?php while ($m = $materias->fetch_assoc()): ?>
-                <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nombre']) ?></option>
-            <?php endwhile; $materias->data_seek(0); ?>
-        </select>
-    </label><br>
+        <label>Materia:
+            <select name="materia_id" required>
+                <option value="">-- Seleccione Materia --</option>
+                <?php while ($m = $materias->fetch_assoc()): ?>
+                    <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nombre']) ?></option>
+                <?php endwhile;
+                $materias->data_seek(0); ?>
+            </select>
+        </label><br>
 
-    <label>Curso:
-        <select name="curso_id" required>
-            <option value="">-- Seleccione Curso --</option>
-            <?php while ($c = $cursos->fetch_assoc()): ?>
-                <option value="<?= $c['id'] ?>">
-                    <?= htmlspecialchars($c['codigo'] . ' - ' . $c['division'] . ' (' . $c['ciclo_lectivo'] . ')') ?>
-                </option>
-            <?php endwhile; $cursos->data_seek(0); ?>
-        </select>
-    </label><br>
+        <label>Curso:
+            <select name="curso_id" required>
+                <option value="">-- Seleccione Curso --</option>
+                <?php while ($c = $cursos->fetch_assoc()): ?>
+                    <option value="<?= $c['id'] ?>">
+                        <?= htmlspecialchars($c['codigo'] . ' - ' . $c['division'] . ' (' . $c['ciclo_lectivo'] . ')') ?>
+                    </option>
+                <?php endwhile;
+                $cursos->data_seek(0); ?>
+            </select>
+        </label><br>
 
-    <button type="submit">Asignar Profesor</button>
-    <button type="button" id="cancelarEdicionBtnAsignacion" onclick="cancelarEdicionAsignacion()" style="display:none; margin-left: 10px;">Cancelar Edición</button> 
-</form>
+        <button type="submit">Asignar Profesor</button>
+        <button type="button" id="cancelarEdicionBtnAsignacion" onclick="cancelarEdicionAsignacion()" style="display:none; margin-left: 10px;">Cancelar Edición</button>
+    </form>
     <h2>Asignaciones Actuales</h2>
     <table>
         <thead>
@@ -160,30 +178,34 @@ $cursos = $mysqli->query("SELECT id, codigo, division, ciclo_lectivo FROM curso 
     </table>
 </body>
 <script>
-function prepararEdicionAsignacion(id, profesorId, materiaId, cursoId) {
-    const form = document.getElementById('formGestionAsignacion');
-    form.querySelector('input[name="accion"]').value = 'modificar';
-    form.querySelector('input[name="edit_asignacion_id"]').value = id;
-    form.querySelector('select[name="profesor_id"]').value = profesorId;
-    form.querySelector('select[name="materia_id"]').value = materiaId;
-    form.querySelector('select[name="curso_id"]').value = cursoId;
-    form.querySelector('button[type="submit"]').textContent = 'Guardar Cambios';
+    function prepararEdicionAsignacion(id, profesorId, materiaId, cursoId) {
+        const form = document.getElementById('formGestionAsignacion');
+        form.querySelector('input[name="accion"]').value = 'modificar';
+        form.querySelector('input[name="edit_asignacion_id"]').value = id;
+        form.querySelector('select[name="profesor_id"]').value = profesorId;
+        form.querySelector('select[name="materia_id"]').value = materiaId;
+        form.querySelector('select[name="curso_id"]').value = cursoId;
+        form.querySelector('button[type="submit"]').textContent = 'Guardar Cambios';
 
-    document.getElementById('formAsignacionTitulo').textContent = 'Modificar Asignación';
-    document.getElementById('cancelarEdicionBtnAsignacion').style.display = 'inline';
-    
-    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
+        document.getElementById('formAsignacionTitulo').textContent = 'Modificar Asignación';
+        document.getElementById('cancelarEdicionBtnAsignacion').style.display = 'inline';
 
-function cancelarEdicionAsignacion() {
-    const form = document.getElementById('formGestionAsignacion');
-    form.querySelector('input[name="accion"]').value = 'asignar'; // Acción original para crear [cite: 47]
-    form.querySelector('input[name="edit_asignacion_id"]').value = '';
-    form.reset();
-    form.querySelector('button[type="submit"]').textContent = 'Asignar Profesor'; // Texto original del botón
+        form.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
 
-    document.getElementById('formAsignacionTitulo').textContent = 'Nueva Asignación'; // Título original
-    document.getElementById('cancelarEdicionBtnAsignacion').style.display = 'none';
-}
+    function cancelarEdicionAsignacion() {
+        const form = document.getElementById('formGestionAsignacion');
+        form.querySelector('input[name="accion"]').value = 'asignar'; // Acción original para crear [cite: 47]
+        form.querySelector('input[name="edit_asignacion_id"]').value = '';
+        form.reset();
+        form.querySelector('button[type="submit"]').textContent = 'Asignar Profesor'; // Texto original del botón
+
+        document.getElementById('formAsignacionTitulo').textContent = 'Nueva Asignación'; // Título original
+        document.getElementById('cancelarEdicionBtnAsignacion').style.display = 'none';
+    }
 </script>
+
 </html>

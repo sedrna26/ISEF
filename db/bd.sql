@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 26-05-2025 a las 17:41:44
+-- Tiempo de generación: 27-05-2025 a las 08:16:18
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -138,6 +138,124 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `verificar_correlatividades` (IN `p_
     -- Esta línea es opcional: mostrar el resultado dentro del procedimiento
     -- pero puede causar problemas si se usa como subquery
     -- SELECT p_puede_cursar AS puede_cursar, p_mensaje AS mensaje;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `verificar_requisitos_inscripcion` (IN `p_alumno_id` INT, IN `p_materia_id` INT, OUT `p_puede_cursar_regular` BOOLEAN, OUT `p_mensaje_cursar_regular` VARCHAR(1000), OUT `p_puede_inscribir_libre` BOOLEAN, OUT `p_mensaje_inscribir_libre` VARCHAR(1000))   BEGIN
+    DECLARE v_correlativas_faltantes_reg_reg VARCHAR(500) DEFAULT '';
+    DECLARE v_correlativas_faltantes_reg_acr VARCHAR(500) DEFAULT '';
+    DECLARE v_correlativas_faltantes_libre VARCHAR(500) DEFAULT '';
+    DECLARE v_cumple_reg_reg BOOLEAN DEFAULT TRUE;
+    DECLARE v_cumple_reg_acr BOOLEAN DEFAULT TRUE;
+    DECLARE v_cumple_libre BOOLEAN DEFAULT TRUE;
+    DECLARE v_count_para_acreditar INT DEFAULT 0; -- Declaración movida aquí
+
+    -- Inicializar mensajes
+    SET p_mensaje_cursar_regular = '';
+    SET p_mensaje_inscribir_libre = '';
+
+    -- >> LÓGICA PARA CURSAR REGULAR <<
+
+    -- 1. Verificar correlatividades 'Para cursar regularizada'
+    SELECT GROUP_CONCAT(m_corr.nombre SEPARATOR ', ')
+    INTO v_correlativas_faltantes_reg_reg
+    FROM correlatividad c
+    JOIN materia m_corr ON c.materia_correlativa_id = m_corr.id
+    WHERE c.materia_id = p_materia_id
+      AND c.tipo = 'Para cursar regularizada'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM inscripcion_cursado ic
+          WHERE ic.alumno_id = p_alumno_id
+            AND ic.materia_id = c.materia_correlativa_id
+            AND (ic.estado = 'Regular' OR ic.estado = 'Promocional')
+      );
+
+    IF v_correlativas_faltantes_reg_reg IS NOT NULL AND v_correlativas_faltantes_reg_reg != '' THEN
+        SET v_cumple_reg_reg = FALSE;
+        SET p_mensaje_cursar_regular = CONCAT('Falta regularizar: ', v_correlativas_faltantes_reg_reg);
+    END IF;
+
+    -- 2. Verificar correlatividades 'Para cursar acreditada'
+    SELECT GROUP_CONCAT(m_corr.nombre SEPARATOR ', ')
+    INTO v_correlativas_faltantes_reg_acr
+    FROM correlatividad c
+    JOIN materia m_corr ON c.materia_correlativa_id = m_corr.id
+    WHERE c.materia_id = p_materia_id
+      AND c.tipo = 'Para cursar acreditada'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM evaluacion e
+          JOIN inscripcion_cursado ic ON e.inscripcion_cursado_id = ic.id
+          WHERE ic.alumno_id = p_alumno_id
+            AND ic.materia_id = c.materia_correlativa_id
+            AND e.tipo = 'Final'
+            AND e.nota >= 4 -- Asumiendo que 4 es la nota mínima de aprobación
+      );
+
+    IF v_correlativas_faltantes_reg_acr IS NOT NULL AND v_correlativas_faltantes_reg_acr != '' THEN
+        SET v_cumple_reg_acr = FALSE;
+        IF p_mensaje_cursar_regular != '' THEN
+            SET p_mensaje_cursar_regular = CONCAT(p_mensaje_cursar_regular, '; ');
+        END IF;
+        SET p_mensaje_cursar_regular = CONCAT(p_mensaje_cursar_regular, 'Falta acreditar para cursar: ', v_correlativas_faltantes_reg_acr);
+    END IF;
+
+    -- Determinar si puede cursar regular
+    IF v_cumple_reg_reg AND v_cumple_reg_acr THEN
+        SET p_puede_cursar_regular = TRUE;
+        SET p_mensaje_cursar_regular = 'Cumple con los requisitos para cursar regular.';
+    ELSE
+        SET p_puede_cursar_regular = FALSE;
+        IF p_mensaje_cursar_regular = '' THEN -- En caso de que no haya ninguna correlativa de estos tipos
+             SET p_puede_cursar_regular = TRUE; -- Si no hay correlativas para cursar, puede cursar.
+             SET p_mensaje_cursar_regular = 'No se requieren correlativas para cursar regular.';
+        END IF;
+    END IF;
+
+
+    -- >> LÓGICA PARA INSCRIBIR LIBRE <<
+    -- (Basado en "Para acreditar tener acreditado" del PDF)
+    SELECT GROUP_CONCAT(m_corr.nombre SEPARATOR ', ')
+    INTO v_correlativas_faltantes_libre
+    FROM correlatividad c
+    JOIN materia m_corr ON c.materia_correlativa_id = m_corr.id
+    WHERE c.materia_id = p_materia_id
+      AND c.tipo = 'Para acreditar' -- Este es el tipo clave para "libre"
+      AND NOT EXISTS (
+          SELECT 1
+          FROM evaluacion e
+          JOIN inscripcion_cursado ic ON e.inscripcion_cursado_id = ic.id
+          WHERE ic.alumno_id = p_alumno_id
+            AND ic.materia_id = c.materia_correlativa_id
+            AND e.tipo = 'Final'
+            AND e.nota >= 4 -- Asumiendo que 4 es la nota mínima de aprobación
+      );
+
+    IF v_correlativas_faltantes_libre IS NOT NULL AND v_correlativas_faltantes_libre != '' THEN
+        SET v_cumple_libre = FALSE;
+        SET p_mensaje_inscribir_libre = CONCAT('Para inscribir libre, falta acreditar: ', v_correlativas_faltantes_libre);
+    ELSE
+        -- Resetear v_count_para_acreditar para este chequeo específico.
+        SET v_count_para_acreditar = 0;
+        SELECT COUNT(*)
+        INTO v_count_para_acreditar
+        FROM correlatividad c_check
+        WHERE c_check.materia_id = p_materia_id AND c_check.tipo = 'Para acreditar';
+
+        IF v_count_para_acreditar = 0 THEN
+            SET p_mensaje_inscribir_libre = 'No se requieren correlativas específicas para inscribir libre.';
+        ELSE
+            SET p_mensaje_inscribir_libre = 'Cumple con los requisitos para inscribir libre.';
+        END IF;
+        -- Si no hay correlativas faltantes (v_correlativas_faltantes_libre es NULL o vacío)
+        -- y SÍ existen correlativas de tipo 'Para acreditar' (v_count_para_acreditar > 0),
+        -- o NO existen correlativas de tipo 'Para acreditar' (v_count_para_acreditar = 0),
+        -- entonces se cumple.
+        SET v_cumple_libre = TRUE;
+    END IF;
+    
+    SET p_puede_inscribir_libre = v_cumple_libre;
+
 END$$
 
 DELIMITER ;
@@ -552,6 +670,22 @@ INSERT INTO `materia` (`id`, `nro_orden`, `codigo`, `nombre`, `tipo`, `anio`, `c
 (4, 4, 'MAT104', 'Deportes de Conjunto I', 'Cuatrimestral', 1, '2°'),
 (5, 5, 'MAT201', 'Entrenamiento Deportivo', 'Anual', 2, 'Anual'),
 (6, 6, 'MAT202', 'Didáctica de la Educación Física', 'Anual', 2, 'Anual');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `periodos_inscripcion`
+--
+
+CREATE TABLE `periodos_inscripcion` (
+  `id` int(11) NOT NULL,
+  `ciclo_lectivo` int(11) NOT NULL,
+  `cuatrimestre` enum('1°','2°','Anual') NOT NULL,
+  `fecha_apertura` date NOT NULL,
+  `fecha_cierre` date NOT NULL,
+  `descripcion` varchar(255) DEFAULT NULL,
+  `activo` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -1098,6 +1232,13 @@ ALTER TABLE `materia`
   ADD KEY `idx_anio_cuatrimestre` (`anio`,`cuatrimestre`);
 
 --
+-- Indices de la tabla `periodos_inscripcion`
+--
+ALTER TABLE `periodos_inscripcion`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_ciclo_cuatri_activo` (`ciclo_lectivo`,`cuatrimestre`,`activo`);
+
+--
 -- Indices de la tabla `persona`
 --
 ALTER TABLE `persona`
@@ -1217,6 +1358,12 @@ ALTER TABLE `licencia_profesor`
 --
 ALTER TABLE `materia`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT de la tabla `periodos_inscripcion`
+--
+ALTER TABLE `periodos_inscripcion`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `persona`

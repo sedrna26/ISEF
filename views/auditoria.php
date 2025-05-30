@@ -25,16 +25,36 @@ $audit_result = $mysqli->query($audit_query);
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Auditoría - ISEF</title>
     <style>
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-        th { background-color: #f2f2f2; }
-        pre { white-space: pre-wrap; word-wrap: break-word; }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     </style>
 </head>
+
 <body>
     <h1>Registro de Auditoría</h1>
     <a href="dashboard.php">&laquo; Volver al menú</a>
@@ -62,12 +82,17 @@ $audit_result = $mysqli->query($audit_query);
                     <td><?= htmlspecialchars($row['tipo_operacion']) ?></td>
                     <td><?= htmlspecialchars($row['tabla_afectada']) ?></td>
                     <td><?= htmlspecialchars($row['registro_afectado']) ?></td>
-                    <td><pre><?= htmlspecialchars($row['valor_anterior']) ?></pre></td>
-                    <td><pre><?= htmlspecialchars($row['valor_nuevo']) ?></pre></td>
+                    <td>
+                        <pre><?= htmlspecialchars($row['valor_anterior']) ?></pre>
+                    </td>
+                    <td>
+                        <pre><?= htmlspecialchars($row['valor_nuevo']) ?></pre>
+                    </td>
                     <td><?= htmlspecialchars($row['ip_origen']) ?></td>
                 </tr>
             <?php endwhile; ?>
         </tbody>
     </table>
 </body>
+
 </html>

@@ -13,9 +13,18 @@ if ($mysqli->connect_errno) { //
 
 setlocale(LC_TIME, 'es_AR.UTF-8', 'es_ES.UTF-8', 'es_ES', 'esp', 'spanish'); //
 $meses_en_espanol = [ //
-    1 => "Enero", 2 => "Febrero", 3 => "Marzo", 4 => "Abril",
-    5 => "Mayo", 6 => "Junio", 7 => "Julio", 8 => "Agosto",
-    9 => "Septiembre", 10 => "Octubre", 11 => "Noviembre", 12 => "Diciembre"
+    1 => "Enero",
+    2 => "Febrero",
+    3 => "Marzo",
+    4 => "Abril",
+    5 => "Mayo",
+    6 => "Junio",
+    7 => "Julio",
+    8 => "Agosto",
+    9 => "Septiembre",
+    10 => "Octubre",
+    11 => "Noviembre",
+    12 => "Diciembre"
 ];
 $usuario_id = $_SESSION['usuario_id']; //
 $tipo_usuario = $_SESSION['tipo']; //
@@ -30,22 +39,22 @@ if ($tipo_usuario === 'profesor') {
     "); //
     $profesor_data = $profesor_res->fetch_assoc(); //
     $profesor_id = $profesor_data ? $profesor_data['profesor_id'] : null; //
-} else { 
+} else {
     $profesor_res = $mysqli->query("SELECT id FROM profesor LIMIT 1"); //
     $profesor_data = $profesor_res->fetch_assoc(); //
-    $profesor_id_preceptor_default = $profesor_data ? $profesor_data['id'] : null; 
+    $profesor_id_preceptor_default = $profesor_data ? $profesor_data['id'] : null;
 }
 
 $mensaje_feedback = ''; //
 $redirect_url_params = ''; //
 
 // --- Variables para la planilla del Preceptor ---
-$curso_id_seleccionado_preceptor = isset($_REQUEST['curso_id_pre']) ? (int)$_REQUEST['curso_id_pre'] : null; 
-$materia_id_seleccionada_preceptor = isset($_REQUEST['materia_id_pre']) ? (int)$_REQUEST['materia_id_pre'] : null; 
+$curso_id_seleccionado_preceptor = isset($_REQUEST['curso_id_pre']) ? (int)$_REQUEST['curso_id_pre'] : null;
+$materia_id_seleccionada_preceptor = isset($_REQUEST['materia_id_pre']) ? (int)$_REQUEST['materia_id_pre'] : null;
 // MODIFICADO: Asegurar que (int) se aplique a date('m') también
-$mes_seleccionado_preceptor = isset($_REQUEST['mes_pre']) ? (int)$_REQUEST['mes_pre'] : (int)date('m'); 
-$anio_seleccionado_preceptor = isset($_REQUEST['anio_pre']) ? (int)$_REQUEST['anio_pre'] : date('Y'); 
-$mostrar_planilla_preceptor = isset($_REQUEST['mostrar_planilla_preceptor']); 
+$mes_seleccionado_preceptor = isset($_REQUEST['mes_pre']) ? (int)$_REQUEST['mes_pre'] : (int)date('m');
+$anio_seleccionado_preceptor = isset($_REQUEST['anio_pre']) ? (int)$_REQUEST['anio_pre'] : date('Y');
+$mostrar_planilla_preceptor = isset($_REQUEST['mostrar_planilla_preceptor']);
 
 // --- Variables para la planilla del Profesor ---
 $materia_id_seleccionada_profesor = null;
@@ -59,7 +68,7 @@ if ($tipo_usuario === 'profesor') {
     $materia_id_seleccionada_profesor = isset($_REQUEST['materia_id_prof']) ? (int)$_REQUEST['materia_id_prof'] : null;
     $curso_id_seleccionado_profesor = isset($_REQUEST['curso_id_prof']) ? (int)$_REQUEST['curso_id_prof'] : null;
     // MODIFICADO: Asegurar que (int) se aplique a date('m') también
-    $mes_seleccionado_profesor = isset($_REQUEST['mes_prof']) ? (int)$_REQUEST['mes_prof'] : (int)date('m'); 
+    $mes_seleccionado_profesor = isset($_REQUEST['mes_prof']) ? (int)$_REQUEST['mes_prof'] : (int)date('m');
     $anio_seleccionado_profesor = isset($_REQUEST['anio_prof']) ? (int)$_REQUEST['anio_prof'] : date('Y');
     $mostrar_planilla_profesor = isset($_REQUEST['mostrar_planilla_profesor']);
 }
@@ -92,8 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // [cite: 244]
         $redirect_url_params = "&curso_id_pre=$curso_id_post&materia_id_pre=$materia_id_post&mes_pre=$mes_post&anio_pre=$anio_post&mostrar_planilla_preceptor=1"; // [cite: 248]
 
         $profesor_a_usar_preceptor = $profesor_id_preceptor_default; // El preceptor usa el profesor por defecto
-                                                                    // Opcional: si el preceptor debe seleccionar un profesor específico para la materia,
-                                                                    // ese ID vendría del formulario. Por ahora, se usa el default.
+        // Opcional: si el preceptor debe seleccionar un profesor específico para la materia,
+        // ese ID vendría del formulario. Por ahora, se usa el default.
 
         if (!$profesor_a_usar_preceptor) { // [cite: 249]
             $mensaje_feedback = "Error: No se pudo determinar un profesor para asignar la asistencia (Preceptor)."; // [cite: 249]
@@ -229,12 +238,12 @@ if ($tipo_usuario === 'profesor') {
                 WHERE ic.curso_id = $curso_id_seleccionado_profesor AND ic.materia_id = $materia_id_seleccionada_profesor
                 ORDER BY p.apellidos, p.nombres
             "); // [cite: 264]
-            if($query_alumnos_prof) {
+            if ($query_alumnos_prof) {
                 while ($alumno_prof = $query_alumnos_prof->fetch_assoc()) { // [cite: 266]
                     $alumnos_planilla_profesor[] = $alumno_prof;
                     $fecha_inicio_mes_prof = $anio_seleccionado_profesor . "-" . str_pad($mes_seleccionado_profesor, 2, '0', STR_PAD_LEFT) . "-01"; // [cite: 267]
                     $fecha_fin_mes_prof = date("Y-m-t", strtotime($fecha_inicio_mes_prof)); // [cite: 268]
-                    
+
                     $stmt_asist_prof = $mysqli->prepare("SELECT fecha, estado FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha BETWEEN ? AND ?"); // [cite: 269]
                     $stmt_asist_prof->bind_param("iss", $alumno_prof['inscripcion_cursado_id'], $fecha_inicio_mes_prof, $fecha_fin_mes_prof); // [cite: 270]
                     $stmt_asist_prof->execute(); // [cite: 270]
@@ -272,7 +281,7 @@ if ($tipo_usuario === 'profesor') {
             WHERE ic.curso_id = $curso_id_seleccionado_preceptor AND ic.materia_id = $materia_id_seleccionada_preceptor
             ORDER BY p.apellidos, p.nombres
         "); // [cite: 264, 265]
-        if($query_alumnos){
+        if ($query_alumnos) {
             while ($alumno = $query_alumnos->fetch_assoc()) { // [cite: 266]
                 $alumnos_planilla_preceptor[] = $alumno; // [cite: 266]
                 $fecha_inicio_mes = $anio_seleccionado_preceptor . "-" . str_pad($mes_seleccionado_preceptor, 2, '0', STR_PAD_LEFT) . "-01"; // [cite: 267, 268]
@@ -327,11 +336,10 @@ if ($tipo_usuario === 'profesor') {
     if ($mes_seleccionado_profesor) $params_paginacion .= "&mes_prof=$mes_seleccionado_profesor";
     if ($anio_seleccionado_profesor) $params_paginacion .= "&anio_prof=$anio_seleccionado_profesor";
     if ($mostrar_planilla_profesor) $params_paginacion .= "&mostrar_planilla_profesor=1";
-
 } else if ($tipo_usuario === 'preceptor') {
     if ($curso_id_seleccionado_preceptor) {
-         $filtros_listado .= " AND ic.curso_id = $curso_id_seleccionado_preceptor"; // [cite: 277, 283]
-         $params_paginacion .= "&curso_id_pre=$curso_id_seleccionado_preceptor"; // [cite: 380]
+        $filtros_listado .= " AND ic.curso_id = $curso_id_seleccionado_preceptor"; // [cite: 277, 283]
+        $params_paginacion .= "&curso_id_pre=$curso_id_seleccionado_preceptor"; // [cite: 380]
     }
     if ($materia_id_seleccionada_preceptor) {
         $filtros_listado .= " AND ic.materia_id = $materia_id_seleccionada_preceptor"; // [cite: 277, 284]
@@ -379,7 +387,7 @@ if ($materia_id_seleccionada_profesor && $materias_profesor_res) {
     $stmt_m->bind_param("i", $materia_id_seleccionada_profesor);
     $stmt_m->execute();
     $res_m = $stmt_m->get_result();
-    if($r = $res_m->fetch_assoc()) $nombre_materia_planilla_prof = $r['nombre'];
+    if ($r = $res_m->fetch_assoc()) $nombre_materia_planilla_prof = $r['nombre'];
     $stmt_m->close();
 }
 if ($curso_id_seleccionado_profesor && $cursos_profesor_res) {
@@ -387,7 +395,7 @@ if ($curso_id_seleccionado_profesor && $cursos_profesor_res) {
     $stmt_c->bind_param("i", $curso_id_seleccionado_profesor);
     $stmt_c->execute();
     $res_c = $stmt_c->get_result();
-    if($r = $res_c->fetch_assoc()) $nombre_curso_planilla_prof = $r['curso_nombre_completo'];
+    if ($r = $res_c->fetch_assoc()) $nombre_curso_planilla_prof = $r['curso_nombre_completo'];
     $stmt_c->close();
 }
 
@@ -398,15 +406,15 @@ if ($materia_id_seleccionada_preceptor && $materias_preceptor_res) {
     $stmt_m->bind_param("i", $materia_id_seleccionada_preceptor);
     $stmt_m->execute();
     $res_m = $stmt_m->get_result();
-    if($r = $res_m->fetch_assoc()) $nombre_materia_planilla_pre = $r['nombre'];
+    if ($r = $res_m->fetch_assoc()) $nombre_materia_planilla_pre = $r['nombre'];
     $stmt_m->close();
 }
 if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
-     $stmt_c = $mysqli->prepare("SELECT CONCAT(codigo, ' ', division, ' - ', ciclo_lectivo) AS curso_nombre FROM curso WHERE id = ?");
+    $stmt_c = $mysqli->prepare("SELECT CONCAT(codigo, ' ', division, ' - ', ciclo_lectivo) AS curso_nombre FROM curso WHERE id = ?");
     $stmt_c->bind_param("i", $curso_id_seleccionado_preceptor);
     $stmt_c->execute();
     $res_c = $stmt_c->get_result();
-    if($r = $res_c->fetch_assoc()) $nombre_curso_planilla_pre = $r['curso_nombre'];
+    if ($r = $res_c->fetch_assoc()) $nombre_curso_planilla_pre = $r['curso_nombre'];
     $stmt_c->close();
 }
 
@@ -414,34 +422,177 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Asistencias - ISEF</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; font-size: 0.9rem; } /* [cite: 290, 291] */
-        table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 0.85em; } /* [cite: 291, 292] */
-        th, td { border: 1px solid #ddd; padding: 5px; text-align: left; } /* [cite: 292] */
-        th { background-color: #f2f2f2; text-align: center; vertical-align: middle;} /* [cite: 293] */
-        td.day-cell { min-width: 45px; text-align: center; padding: 2px; } /* [cite: 294] */
-        td.day-cell select { padding: 3px; font-size:0.9em; width:100%; max-width:50px; border-radius:3px; border:1px solid #ccc; } /* [cite: 295] */
-        .form-section { margin-bottom: 25px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;} /* [cite: 296] */
-        .form-section h2 { margin-top: 0; font-size: 1.5em; } /* [cite: 297] */
-        label { display: inline-block; margin-bottom: 5px; margin-right: 8px; font-weight:500;} /* [cite: 298] */
-        select, input[type="date"], input[type="number"], .btn { padding: 0.375rem 0.75rem; margin-bottom:10px; border-radius: 0.25rem; border: 1px solid #ced4da; font-size: 0.9rem;} /* [cite: 299] */
-        .btn-primary { background-color: #007bff; color: white; border-color: #007bff; } /* [cite: 300] */
-        .btn-primary:hover { background-color: #0056b3; border-color: #0056b3;} /* [cite: 301] */
-        .feedback { padding: 10px; margin-bottom: 15px; border-radius: 3px; color: #0f5132; background-color: #d1e7dd; border: 1px solid #badbcc;} /* [cite: 302] */
-        .error { padding: 10px; margin-bottom: 15px; border-radius: 3px; color: #842029; background-color: #f8d7da; border: 1px solid #f5c2c7;} /* [cite: 303, 304] */
-        .paginacion { margin: 20px 0; text-align: center; } /* [cite: 304, 305] */
-        .paginacion a, .paginacion span { color: #0d6efd; padding: 0.375rem 0.75rem; text-decoration: none; border: 1px solid #dee2e6; margin: 0 2px; border-radius: 0.25rem;} /* [cite: 305, 306] */
-        .paginacion a:hover { background-color: #e9ecef; } /* [cite: 306] */
-        .paginacion span.current { background-color: #0d6efd; color: white; border-color: #0d6efd; } /* [cite: 307] */
-        .sticky-header th { position: sticky; top: 0; z-index: 2; background-color: #e9ecef; } /* [cite: 308] */
-        .table-responsive { overflow-x: auto; } /* [cite: 342] */
-        .bg-light-weekend { background-color: #f8f9fa !important; } /* [cite: 347] */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* [cite: 290, 291] */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 0.85em;
+        }
+
+        /* [cite: 291, 292] */
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 5px;
+            text-align: left;
+        }
+
+        /* [cite: 292] */
+        th {
+            background-color: #f2f2f2;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* [cite: 293] */
+        td.day-cell {
+            min-width: 45px;
+            text-align: center;
+            padding: 2px;
+        }
+
+        /* [cite: 294] */
+        td.day-cell select {
+            padding: 3px;
+            font-size: 0.9em;
+            width: 100%;
+            max-width: 50px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+
+        /* [cite: 295] */
+        .form-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        /* [cite: 296] */
+        .form-section h2 {
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+
+        /* [cite: 297] */
+        label {
+            display: inline-block;
+            margin-bottom: 5px;
+            margin-right: 8px;
+            font-weight: 500;
+        }
+
+        /* [cite: 298] */
+        select,
+        input[type="date"],
+        input[type="number"],
+        .btn {
+            padding: 0.375rem 0.75rem;
+            margin-bottom: 10px;
+            border-radius: 0.25rem;
+            border: 1px solid #ced4da;
+            font-size: 0.9rem;
+        }
+
+        /* [cite: 299] */
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        /* [cite: 300] */
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* [cite: 301] */
+        .feedback {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+            color: #0f5132;
+            background-color: #d1e7dd;
+            border: 1px solid #badbcc;
+        }
+
+        /* [cite: 302] */
+        .error {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+            color: #842029;
+            background-color: #f8d7da;
+            border: 1px solid #f5c2c7;
+        }
+
+        /* [cite: 303, 304] */
+        .paginacion {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        /* [cite: 304, 305] */
+        .paginacion a,
+        .paginacion span {
+            color: #0d6efd;
+            padding: 0.375rem 0.75rem;
+            text-decoration: none;
+            border: 1px solid #dee2e6;
+            margin: 0 2px;
+            border-radius: 0.25rem;
+        }
+
+        /* [cite: 305, 306] */
+        .paginacion a:hover {
+            background-color: #e9ecef;
+        }
+
+        /* [cite: 306] */
+        .paginacion span.current {
+            background-color: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
+        }
+
+        /* [cite: 307] */
+        .sticky-header th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #e9ecef;
+        }
+
+        /* [cite: 308] */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        /* [cite: 342] */
+        .bg-light-weekend {
+            background-color: #f8f9fa !important;
+        }
+
+        /* [cite: 347] */
     </style>
 </head>
+
 <body>
     <div class="container-fluid">
         <h1>Gestión de Asistencias</h1>
@@ -461,27 +612,30 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                         <label for="materia_id_prof_select" class="form-label">Materia:</label>
                         <select name="materia_id_prof" id="materia_id_prof_select" class="form-select form-select-sm" required onchange="this.form.submit()">
                             <option value="">-- Seleccione Materia --</option>
-                            <?php if($materias_profesor_res) : ?>
+                            <?php if ($materias_profesor_res) : ?>
                                 <?php while ($m = $materias_profesor_res->fetch_assoc()): ?>
                                     <option value="<?= $m['id'] ?>" <?= ($materia_id_seleccionada_profesor == $m['id']) ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($m['nombre']) ?>
                                     </option>
-                                <?php endwhile; $materias_profesor_res->data_seek(0); // Reset pointer if needed elsewhere ?>
+                                <?php endwhile;
+                                $materias_profesor_res->data_seek(0); // Reset pointer if needed elsewhere 
+                                ?>
                             <?php endif; ?>
                         </select>
                     </div>
 
                     <?php if ($materia_id_seleccionada_profesor): ?>
-                         <div class="col-md-3">
+                        <div class="col-md-3">
                             <label for="curso_id_prof_select" class="form-label">Curso:</label>
                             <select name="curso_id_prof" id="curso_id_prof_select" class="form-select form-select-sm" required onchange="this.form.submit()">
                                 <option value="">-- Seleccione Curso --</option>
-                                <?php if($cursos_profesor_res) : ?>
+                                <?php if ($cursos_profesor_res) : ?>
                                     <?php while ($c = $cursos_profesor_res->fetch_assoc()): ?>
                                         <option value="<?= $c['id'] ?>" <?= ($curso_id_seleccionado_profesor == $c['id']) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($c['curso_nombre_completo']) ?>
                                         </option>
-                                    <?php endwhile; $cursos_profesor_res->data_seek(0); ?>
+                                    <?php endwhile;
+                                    $cursos_profesor_res->data_seek(0); ?>
                                 <?php endif; ?>
                             </select>
                         </div>
@@ -499,7 +653,7 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                             </select>
                         </div>
                         <div class="col-md-2">
-                             <label for="anio_prof_select" class="form-label">Año:</label>
+                            <label for="anio_prof_select" class="form-label">Año:</label>
                             <select name="anio_prof" id="anio_prof_select" class="form-select form-select-sm" required onchange="this.form.submit()">
                                 <?php for ($a = date('Y'); $a >= date('Y') - 2; $a--): ?>
                                     <option value="<?= $a ?>" <?= ($anio_seleccionado_profesor == $a) ? 'selected' : '' ?>><?= $a ?></option>
@@ -543,12 +697,19 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                                     <tbody>
                                         <?php foreach ($alumnos_planilla_profesor as $index => $alumno): ?>
                                             <tr>
-                                                <td><?= $index + 1 ?></td> <td><?= htmlspecialchars($alumno['legajo']) ?></td> <td><?= htmlspecialchars($alumno['alumno_nombre']) ?></td> <?php for ($dia = 1; $dia <= $dias_en_mes_prof; $dia++):
-                                                    $fecha_completa = $anio_seleccionado_profesor . '-' . str_pad($mes_seleccionado_profesor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT); // [cite: 352, 353]
-                                                    $estado_actual = $asistencias_cargadas_planilla_profesor[$alumno['inscripcion_cursado_id']][$fecha_completa] ?? '';
-                                                ?>
+                                                <td><?= $index + 1 ?></td>
+                                                <td><?= htmlspecialchars($alumno['legajo']) ?></td>
+                                                <td><?= htmlspecialchars($alumno['alumno_nombre']) ?></td> <?php for ($dia = 1; $dia <= $dias_en_mes_prof; $dia++):
+                                                                                                                $fecha_completa = $anio_seleccionado_profesor . '-' . str_pad($mes_seleccionado_profesor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT); // [cite: 352, 353]
+                                                                                                                $estado_actual = $asistencias_cargadas_planilla_profesor[$alumno['inscripcion_cursado_id']][$fecha_completa] ?? '';
+                                                                                                            ?>
                                                     <td class="day-cell">
-                                                        <select name="asistencias_planilla_prof[<?= $alumno['inscripcion_cursado_id'] ?>][<?= $fecha_completa ?>]" class="form-select form-select-sm p-1"> <option value="" <?= ($estado_actual == '') ? 'selected' : '' ?>>-</option> <option value="Presente" <?= ($estado_actual == 'Presente') ? 'selected' : '' ?>>P</option> <option value="Ausente" <?= ($estado_actual == 'Ausente') ? 'selected' : '' ?>>A</option> <option value="Justificado" <?= ($estado_actual == 'Justificado') ? 'selected' : '' ?>>J</option> </select>
+                                                        <select name="asistencias_planilla_prof[<?= $alumno['inscripcion_cursado_id'] ?>][<?= $fecha_completa ?>]" class="form-select form-select-sm p-1">
+                                                            <option value="" <?= ($estado_actual == '') ? 'selected' : '' ?>>-</option>
+                                                            <option value="Presente" <?= ($estado_actual == 'Presente') ? 'selected' : '' ?>>P</option>
+                                                            <option value="Ausente" <?= ($estado_actual == 'Ausente') ? 'selected' : '' ?>>A</option>
+                                                            <option value="Justificado" <?= ($estado_actual == 'Justificado') ? 'selected' : '' ?>>J</option>
+                                                        </select>
                                                     </td>
                                                 <?php endfor; ?>
                                             </tr>
@@ -556,30 +717,38 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                                     </tbody>
                                 </table>
                             </div>
-                            <button type="submit" class="btn btn-success mt-3">Guardar Asistencias (Profesor)</button> </form>
+                            <button type="submit" class="btn btn-success mt-3">Guardar Asistencias (Profesor)</button>
+                        </form>
                     <?php else: ?>
                         <p class="mt-3">No hay alumnos inscritos para la materia y curso seleccionados.</p> <?php endif; ?>
                 <?php elseif ($mostrar_planilla_profesor): ?>
-                     <p class="mt-3">Por favor, seleccione Materia, Curso, Mes y Año y presione "Mostrar Planilla".</p>
+                    <p class="mt-3">Por favor, seleccione Materia, Curso, Mes y Año y presione "Mostrar Planilla".</p>
                 <?php endif; ?>
             </div>
 
         <?php elseif ($tipo_usuario === 'preceptor'): ?>
             <div class="form-section">
                 <h2>Planilla de Asistencia (Preceptor)</h2>
-                <form method="GET" action="asistencias.php" class="row g-3 align-items-end"> <input type="hidden" name="mostrar_planilla_preceptor" value="1"> <div class="col-md-3">
+                <form method="GET" action="asistencias.php" class="row g-3 align-items-end"> <input type="hidden" name="mostrar_planilla_preceptor" value="1">
+                    <div class="col-md-3">
                         <label for="curso_id_pre_select" class="form-label">Curso:</label>
-                        <select name="curso_id_pre" id="curso_id_pre_select" class="form-select form-select-sm" required onchange="this.form.submit()"> <option value="">-- Seleccione Curso --</option> <?php if($cursos_preceptor_res) : ?> <?php while ($c = $cursos_preceptor_res->fetch_assoc()): ?>
+                        <select name="curso_id_pre" id="curso_id_pre_select" class="form-select form-select-sm" required onchange="this.form.submit()">
+                            <option value="">-- Seleccione Curso --</option> <?php if ($cursos_preceptor_res) : ?> <?php while ($c = $cursos_preceptor_res->fetch_assoc()): ?>
                                     <option value="<?= $c['id'] ?>" <?= ($curso_id_seleccionado_preceptor == $c['id']) ? 'selected' : '' ?>> <?= htmlspecialchars($c['curso_nombre']) ?>
                                     </option>
-                                <?php endwhile; $cursos_preceptor_res->data_seek(0); ?> <?php endif; ?> </select>
+                                <?php endwhile;
+                                                                                                                    $cursos_preceptor_res->data_seek(0); ?> <?php endif; ?>
+                        </select>
                     </div>
 
                     <?php if ($curso_id_seleccionado_preceptor): ?> <div class="col-md-3">
                             <label for="materia_id_pre_select" class="form-label">Materia:</label>
-                            <select name="materia_id_pre" id="materia_id_pre_select" class="form-select form-select-sm" required onchange="this.form.submit()"> <option value="">-- Seleccione Materia --</option> <?php if($materias_preceptor_res) : ?> <?php while ($m = $materias_preceptor_res->fetch_assoc()): ?> <option value="<?= $m['id'] ?>" <?= ($materia_id_seleccionada_preceptor == $m['id']) ? 'selected' : '' ?>> <?= htmlspecialchars($m['nombre']) ?>
+                            <select name="materia_id_pre" id="materia_id_pre_select" class="form-select form-select-sm" required onchange="this.form.submit()">
+                                <option value="">-- Seleccione Materia --</option> <?php if ($materias_preceptor_res) : ?> <?php while ($m = $materias_preceptor_res->fetch_assoc()): ?> <option value="<?= $m['id'] ?>" <?= ($materia_id_seleccionada_preceptor == $m['id']) ? 'selected' : '' ?>> <?= htmlspecialchars($m['nombre']) ?>
                                         </option>
-                                    <?php endwhile; $materias_preceptor_res->data_seek(0);?> <?php endif; ?> </select>
+                                    <?php endwhile;
+                                                                                                                            $materias_preceptor_res->data_seek(0); ?> <?php endif; ?>
+                            </select>
                         </div>
                     <?php endif; ?> <?php if ($curso_id_seleccionado_preceptor && $materia_id_seleccionada_preceptor): ?> <div class="col-md-2">
                             <label for="mes_pre_select" class="form-label">Mes:</label>
@@ -588,55 +757,84 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                                 <?php endfor; ?> </select>
                         </div>
                         <div class="col-md-2">
-                             <label for="anio_pre_select" class="form-label">Año:</label>
+                            <label for="anio_pre_select" class="form-label">Año:</label>
                             <select name="anio_pre" id="anio_pre_select" class="form-select form-select-sm" required onchange="this.form.submit()"> <?php for ($a = date('Y'); $a >= date('Y') - 2; $a--): ?> <option value="<?= $a ?>" <?= ($anio_seleccionado_preceptor == $a) ? 'selected' : '' ?>><?= $a ?></option> <?php endfor; ?> </select>
                         </div>
-                         <div class="col-md-2">
-                            <button type="submit" class="btn btn-sm btn-info w-100">Mostrar Planilla</button> </div>
-                    <?php endif; ?> </form>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-sm btn-info w-100">Mostrar Planilla</button>
+                        </div>
+                    <?php endif; ?>
+                </form>
 
                 <?php if ($mostrar_planilla_preceptor && $curso_id_seleccionado_preceptor && $materia_id_seleccionada_preceptor && $mes_seleccionado_preceptor && $anio_seleccionado_preceptor): ?> <?php if (!empty($alumnos_planilla_preceptor)): // [cite: 339]
-                        $dias_en_mes_pre = cal_days_in_month(CAL_GREGORIAN, $mes_seleccionado_preceptor, $anio_seleccionado_preceptor); // [cite: 339]
-                    ?>
-                        <h3 class="mt-4">Planilla Preceptor: <?= htmlspecialchars($nombre_materia_planilla_pre) ?> - <?= htmlspecialchars($nombre_curso_planilla_pre) ?> - Mes: <?= $meses_en_espanol[$mes_seleccionado_preceptor] ?> <?= $anio_seleccionado_preceptor ?></h3> <form method="POST" action="asistencias.php">
+                                                                                                                                                                                                        $dias_en_mes_pre = cal_days_in_month(CAL_GREGORIAN, $mes_seleccionado_preceptor, $anio_seleccionado_preceptor); // [cite: 339]
+                                                                                                                                                                                                    ?>
+                        <h3 class="mt-4">Planilla Preceptor: <?= htmlspecialchars($nombre_materia_planilla_pre) ?> - <?= htmlspecialchars($nombre_curso_planilla_pre) ?> - Mes: <?= $meses_en_espanol[$mes_seleccionado_preceptor] ?> <?= $anio_seleccionado_preceptor ?></h3>
+                        <form method="POST" action="asistencias.php">
                             <input type="hidden" name="guardar_planilla_asistencia_preceptor" value="1">
-                            <input type="hidden" name="curso_id_pre_hidden" value="<?= $curso_id_seleccionado_preceptor ?>"> <input type="hidden" name="materia_id_pre_hidden" value="<?= $materia_id_seleccionada_preceptor ?>"> <input type="hidden" name="mes_pre_hidden" value="<?= $mes_seleccionado_preceptor ?>"> <input type="hidden" name="anio_pre_hidden" value="<?= $anio_seleccionado_preceptor ?>"> <div class="table-responsive mt-3"> <table class="table table-bordered table-sm table-hover">
-                                    <thead class="sticky-header"> <tr>
-                                            <th style="width: 40px;">N°</th> <th style="width: 80px;">Legajo</th> <th>Alumno</th> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): // [cite: 344, 345]
-                                                $fecha_actual_dia = new DateTime("$anio_seleccionado_preceptor-$mes_seleccionado_preceptor-$dia"); // [cite: 345]
-                                                $nombre_dia_semana = strftime('%a', $fecha_actual_dia->getTimestamp()); // [cite: 346]
-                                                $es_finde = (in_array($nombre_dia_semana, ['Sat', 'Sun', 'Sáb', 'Dom'])); // [cite: 346]
-                                            ?>
+                            <input type="hidden" name="curso_id_pre_hidden" value="<?= $curso_id_seleccionado_preceptor ?>"> <input type="hidden" name="materia_id_pre_hidden" value="<?= $materia_id_seleccionada_preceptor ?>"> <input type="hidden" name="mes_pre_hidden" value="<?= $mes_seleccionado_preceptor ?>"> <input type="hidden" name="anio_pre_hidden" value="<?= $anio_seleccionado_preceptor ?>">
+                            <div class="table-responsive mt-3">
+                                <table class="table table-bordered table-sm table-hover">
+                                    <thead class="sticky-header">
+                                        <tr>
+                                            <th style="width: 40px;">N°</th>
+                                            <th style="width: 80px;">Legajo</th>
+                                            <th>Alumno</th> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): // [cite: 344, 345]
+                                                                                                                                                                                                            $fecha_actual_dia = new DateTime("$anio_seleccionado_preceptor-$mes_seleccionado_preceptor-$dia"); // [cite: 345]
+                                                                                                                                                                                                            $nombre_dia_semana = strftime('%a', $fecha_actual_dia->getTimestamp()); // [cite: 346]
+                                                                                                                                                                                                            $es_finde = (in_array($nombre_dia_semana, ['Sat', 'Sun', 'Sáb', 'Dom'])); // [cite: 346]
+                                                            ?>
                                                 <th class="day-cell <?= $es_finde ? 'bg-light-weekend' : '' ?>" title="<?= ucfirst($nombre_dia_semana) ?>"> <?= $dia ?>
                                                 </th>
-                                            <?php endfor; ?> </tr>
+                                            <?php endfor; ?>
+                                        </tr>
                                     </thead>
                                     <tbody> <?php foreach ($alumnos_planilla_preceptor as $index => $alumno): ?> <tr>
-                                                <td><?= $index + 1 ?></td> <td><?= htmlspecialchars($alumno['legajo']) ?></td> <td><?= htmlspecialchars($alumno['alumno_nombre']) ?></td> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): // [cite: 352]
-                                                    $fecha_completa = $anio_seleccionado_preceptor . '-' . str_pad($mes_seleccionado_preceptor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT); // [cite: 352, 353]
-                                                    $estado_actual = $asistencias_cargadas_planilla_preceptor[$alumno['inscripcion_cursado_id']][$fecha_completa] ?? ''; // [cite: 353]
-                                                ?>
-                                                    <td class="day-cell"> <select name="asistencias_planilla_pre[<?= $alumno['inscripcion_cursado_id'] ?>][<?= $fecha_completa ?>]" class="form-select form-select-sm p-1"> <option value="" <?= ($estado_actual == '') ? 'selected' : '' ?>>-</option> <option value="Presente" <?= ($estado_actual == 'Presente') ? 'selected' : '' ?>>P</option> <option value="Ausente" <?= ($estado_actual == 'Ausente') ? 'selected' : '' ?>>A</option> <option value="Justificado" <?= ($estado_actual == 'Justificado') ? 'selected' : '' ?>>J</option> </select>
+                                                <td><?= $index + 1 ?></td>
+                                                <td><?= htmlspecialchars($alumno['legajo']) ?></td>
+                                                <td><?= htmlspecialchars($alumno['alumno_nombre']) ?></td> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): // [cite: 352]
+                                                                                                                                                                                                                $fecha_completa = $anio_seleccionado_preceptor . '-' . str_pad($mes_seleccionado_preceptor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT); // [cite: 352, 353]
+                                                                                                                                                                                                                $estado_actual = $asistencias_cargadas_planilla_preceptor[$alumno['inscripcion_cursado_id']][$fecha_completa] ?? ''; // [cite: 353]
+                                                                                                            ?>
+                                                    <td class="day-cell"> <select name="asistencias_planilla_pre[<?= $alumno['inscripcion_cursado_id'] ?>][<?= $fecha_completa ?>]" class="form-select form-select-sm p-1">
+                                                            <option value="" <?= ($estado_actual == '') ? 'selected' : '' ?>>-</option>
+                                                            <option value="Presente" <?= ($estado_actual == 'Presente') ? 'selected' : '' ?>>P</option>
+                                                            <option value="Ausente" <?= ($estado_actual == 'Ausente') ? 'selected' : '' ?>>A</option>
+                                                            <option value="Justificado" <?= ($estado_actual == 'Justificado') ? 'selected' : '' ?>>J</option>
+                                                        </select>
                                                     </td>
-                                                <?php endfor; ?> </tr>
+                                                <?php endfor; ?>
+                                            </tr>
                                         <?php endforeach; ?> </tbody>
                                 </table>
                             </div>
-                            <button type="submit" class="btn btn-success mt-3">Guardar Asistencias (Preceptor)</button> </form>
+                            <button type="submit" class="btn btn-success mt-3">Guardar Asistencias (Preceptor)</button>
+                        </form>
                     <?php else: ?>
-                        <p class="mt-3">No hay alumnos inscritos para el curso y materia seleccionados, o no se pudo generar la planilla.</p> <?php endif; ?> <?php elseif ($mostrar_planilla_preceptor): ?> <p class="mt-3">Por favor, seleccione Curso, Materia, Mes y Año y presione "Mostrar Planilla".</p> <?php endif; ?> </div>
-        <?php endif; ?> <div class="card mt-4"> <div class="card-header"> <h5>Generar Informes de Asistencias (PDF)</h5>
+                        <p class="mt-3">No hay alumnos inscritos para el curso y materia seleccionados, o no se pudo generar la planilla.</p> <?php endif; ?> <?php elseif ($mostrar_planilla_preceptor): ?> <p class="mt-3">Por favor, seleccione Curso, Materia, Mes y Año y presione "Mostrar Planilla".</p> <?php endif; ?>
             </div>
-            <div class="card-body"> <form id="formGenerarPDF" action="generar_pdf_asistencias.php" method="POST" target="_blank" class="row g-3 align-items-end"> <div class="col-md-4">
-                        <label for="materia_pdf" class="form-label">Espacio Curricular:</label> <select class="form-select form-select-sm" id="materia_pdf" name="materia_id" required> <option value="">-- Seleccione una materia --</option> <?php foreach ($materias_para_pdf as $materia): ?> <option value="<?= $materia['id'] ?>"><?= htmlspecialchars($materia['nombre']) ?></option> <?php endforeach; ?> </select>
+        <?php endif; ?> <div class="card mt-4">
+            <div class="card-header">
+                <h5>Generar Informes de Asistencias (PDF)</h5>
+            </div>
+            <div class="card-body">
+                <form id="formGenerarPDF" action="generar_pdf_asistencias.php" method="POST" target="_blank" class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="materia_pdf" class="form-label">Espacio Curricular:</label> <select class="form-select form-select-sm" id="materia_pdf" name="materia_id" required>
+                            <option value="">-- Seleccione una materia --</option> <?php foreach ($materias_para_pdf as $materia): ?> <option value="<?= $materia['id'] ?>"><?= htmlspecialchars($materia['nombre']) ?></option> <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div class="col-md-4">
-                        <label for="curso_pdf" class="form-label">Curso:</label> <select class="form-select form-select-sm" id="curso_pdf" name="curso_id" required> <option value="">-- Seleccione un curso --</option> <?php foreach ($cursos_para_pdf as $curso): ?> <option value="<?= $curso['id'] ?>"><?= htmlspecialchars($curso['curso_completo']) ?></option> <?php endforeach; ?> </select>
+                        <label for="curso_pdf" class="form-label">Curso:</label> <select class="form-select form-select-sm" id="curso_pdf" name="curso_id" required>
+                            <option value="">-- Seleccione un curso --</option> <?php foreach ($cursos_para_pdf as $curso): ?> <option value="<?= $curso['id'] ?>"><?= htmlspecialchars($curso['curso_completo']) ?></option> <?php endforeach; ?>
+                        </select>
                     </div>
-                    
-                    <input type="hidden" id="profesor_id_pdf" name="profesor_id"> <div class="col-md-4">
-                        <p class="mt-2 mb-0" id="profesor_nombre_display" style="font-size:0.85rem;">Profesor/a: No seleccionado</p> </div>
+
+                    <input type="hidden" id="profesor_id_pdf" name="profesor_id">
+                    <div class="col-md-4">
+                        <p class="mt-2 mb-0" id="profesor_nombre_display" style="font-size:0.85rem;">Profesor/a: No seleccionado</p>
+                    </div>
 
                     <div class="col-12 mt-3"> <button type="submit" class="btn btn-sm btn-primary me-2" name="periodo" value="abril_julio"> Generar PDF (Abril-Julio)
                         </button>
@@ -649,61 +847,77 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
 
         <div class="form-section mt-4">
             <h2>Últimas Asistencias Registradas <?= ($tipo_usuario === 'preceptor' && ($curso_id_seleccionado_preceptor || $materia_id_seleccionada_preceptor)) ? '(Filtrado por selección actual)' : (($tipo_usuario === 'profesor') ? '(Sus registros)' : '') ?></h2> <?php if ($asistencias_listado && $asistencias_listado->num_rows > 0): ?> <div class="table-responsive">
-                <table class="table table-striped table-sm table-hover">
-                    <thead> <tr>
-                            <th>Alumno</th> <th>Materia</th> <th>Curso</th> <th>Fecha</th> <th>Estado</th> <th>Profesor que registró</th> </tr>
-                    </thead>
-                    <tbody> <?php while ($a = $asistencias_listado->fetch_assoc()): ?> <tr>
-                                <td><?= htmlspecialchars($a['alumno_nombre']) ?></td> <td><?= htmlspecialchars($a['materia_nombre']) ?></td> <td><?= htmlspecialchars($a['curso_codigo'] . ' ' . $a['curso_division'] . ' - ' . $a['curso_anio_desc']) ?></td> <td><?= htmlspecialchars(date("d/m/Y", strtotime($a['fecha']))) ?></td> <td><?= htmlspecialchars($a['estado']) ?></td> <td><?= htmlspecialchars($a['profesor_nombre']) ?></td> </tr>
-                        <?php endwhile; ?> </tbody>
-                </table>
-            </div>
-            <div class="paginacion"> <?php if ($total_paginas > 1): ?> <?php if ($pagina_actual > 1): ?> <a href="?pagina=1<?= $params_paginacion ?>">&laquo; Primera</a> <a href="?pagina=<?= $pagina_actual - 1 ?><?= $params_paginacion ?>">&lsaquo; Anterior</a> <?php endif; ?> <span class="current">Página <?= $pagina_actual ?> de <?= $total_paginas ?></span> <?php if ($pagina_actual < $total_paginas): ?> <a href="?pagina=<?= $pagina_actual + 1 ?><?= $params_paginacion ?>">Siguiente &rsaquo;</a> <a href="?pagina=<?= $total_paginas ?><?= $params_paginacion ?>">Última &raquo;</a> <?php endif; ?> <?php endif; ?> </div> <?php else: ?>
-                <p>No hay asistencias registradas recientemente o para el filtro actual.</p> <?php endif; ?> </div>
-    </div> <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const materiaSelect = document.getElementById('materia_pdf'); // [cite: 388]
-        const profesorIdInput = document.getElementById('profesor_id_pdf'); // [cite: 388]
-        const profesorNombreDisplay = document.getElementById('profesor_nombre_display'); // [cite: 388]
-        // const cursoSelect = document.getElementById('curso_pdf'); // No se usa directamente aquí // [cite: 388]
+                    <table class="table table-striped table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Alumno</th>
+                                <th>Materia</th>
+                                <th>Curso</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Profesor que registró</th>
+                            </tr>
+                        </thead>
+                        <tbody> <?php while ($a = $asistencias_listado->fetch_assoc()): ?> <tr>
+                                    <td><?= htmlspecialchars($a['alumno_nombre']) ?></td>
+                                    <td><?= htmlspecialchars($a['materia_nombre']) ?></td>
+                                    <td><?= htmlspecialchars($a['curso_codigo'] . ' ' . $a['curso_division'] . ' - ' . $a['curso_anio_desc']) ?></td>
+                                    <td><?= htmlspecialchars(date("d/m/Y", strtotime($a['fecha']))) ?></td>
+                                    <td><?= htmlspecialchars($a['estado']) ?></td>
+                                    <td><?= htmlspecialchars($a['profesor_nombre']) ?></td>
+                                </tr>
+                            <?php endwhile; ?> </tbody>
+                    </table>
+                </div>
+                <div class="paginacion"> <?php if ($total_paginas > 1): ?> <?php if ($pagina_actual > 1): ?> <a href="?pagina=1<?= $params_paginacion ?>">&laquo; Primera</a> <a href="?pagina=<?= $pagina_actual - 1 ?><?= $params_paginacion ?>">&lsaquo; Anterior</a> <?php endif; ?> <span class="current">Página <?= $pagina_actual ?> de <?= $total_paginas ?></span> <?php if ($pagina_actual < $total_paginas): ?> <a href="?pagina=<?= $pagina_actual + 1 ?><?= $params_paginacion ?>">Siguiente &rsaquo;</a> <a href="?pagina=<?= $total_paginas ?><?= $params_paginacion ?>">Última &raquo;</a> <?php endif; ?> <?php endif; ?> </div> <?php else: ?>
+                <p>No hay asistencias registradas recientemente o para el filtro actual.</p> <?php endif; ?>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const materiaSelect = document.getElementById('materia_pdf'); // [cite: 388]
+            const profesorIdInput = document.getElementById('profesor_id_pdf'); // [cite: 388]
+            const profesorNombreDisplay = document.getElementById('profesor_nombre_display'); // [cite: 388]
+            // const cursoSelect = document.getElementById('curso_pdf'); // No se usa directamente aquí // [cite: 388]
 
-        function getProfesorForMateria(materiaId) { // [cite: 388]
-            if (!materiaId) { // [cite: 388]
-                profesorIdInput.value = ''; // [cite: 389]
-                profesorNombreDisplay.textContent = 'Profesor/a: No seleccionado'; // [cite: 389]
-                return; // [cite: 389]
+            function getProfesorForMateria(materiaId) { // [cite: 388]
+                if (!materiaId) { // [cite: 388]
+                    profesorIdInput.value = ''; // [cite: 389]
+                    profesorNombreDisplay.textContent = 'Profesor/a: No seleccionado'; // [cite: 389]
+                    return; // [cite: 389]
+                }
+
+                fetch('get_profesor_materia.php?materia_id=' + materiaId) // [cite: 389, 390]
+                    .then(response => response.json()) // [cite: 390]
+                    .then(data => { // [cite: 390]
+                        if (data.profesor_id) { // [cite: 390]
+                            profesorIdInput.value = data.profesor_id; // [cite: 390]
+                            profesorNombreDisplay.textContent = 'Profesor/a: ' + data.profesor_nombre; // [cite: 391]
+                        } else { // [cite: 391]
+                            profesorIdInput.value = ''; // [cite: 391]
+                            profesorNombreDisplay.textContent = 'Profesor/a: No encontrado para esta materia'; // [cite: 392]
+                        }
+                    })
+                    .catch(error => { // [cite: 392]
+                        console.error('Error al obtener el profesor:', error); // [cite: 392]
+                        profesorIdInput.value = ''; // [cite: 392]
+                        profesorNombreDisplay.textContent = 'Profesor/a: Error al cargar'; // [cite: 393]
+                    });
             }
 
-            fetch('get_profesor_materia.php?materia_id=' + materiaId) // [cite: 389, 390]
-                .then(response => response.json()) // [cite: 390]
-                .then(data => { // [cite: 390]
-                    if (data.profesor_id) { // [cite: 390]
-                        profesorIdInput.value = data.profesor_id; // [cite: 390]
-                        profesorNombreDisplay.textContent = 'Profesor/a: ' + data.profesor_nombre; // [cite: 391]
-                    } else { // [cite: 391]
-                        profesorIdInput.value = ''; // [cite: 391]
-                        profesorNombreDisplay.textContent = 'Profesor/a: No encontrado para esta materia'; // [cite: 392]
-                    }
-                })
-                .catch(error => { // [cite: 392]
-                    console.error('Error al obtener el profesor:', error); // [cite: 392]
-                    profesorIdInput.value = ''; // [cite: 392]
-                    profesorNombreDisplay.textContent = 'Profesor/a: Error al cargar'; // [cite: 393]
+            if (materiaSelect) { // 
+                materiaSelect.addEventListener('change', function() { //
+                    getProfesorForMateria(this.value); // 
                 });
-        }
-
-        if(materiaSelect) { // 
-            materiaSelect.addEventListener('change', function() { //
-                getProfesorForMateria(this.value); // 
-            });
-            if (materiaSelect.value) { // 
-                getProfesorForMateria(materiaSelect.value); 
+                if (materiaSelect.value) { // 
+                    getProfesorForMateria(materiaSelect.value);
+                }
             }
-        }
-    });
-</script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
 <?php
 $mysqli->close(); // 

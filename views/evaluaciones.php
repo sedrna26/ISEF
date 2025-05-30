@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tipo_usuario === 'profesor' && iss
                 if ($col_config && ($nota !== '' || isset($_POST['notas_originales'][$ic_id][$col_key]))) { // Procesar si hay nota nueva o había una original (para borrar)
                     $nota_val = ($nota === '') ? null : (int)$nota;
                     $observaciones_columna = $_POST['observaciones_columna'][$ic_id][$col_key] ?? '';
-                    
+
                     // Combinar observaciones: detalle de columna + observación específica de celda + observación general del alumno (decidir prioridad o concatenar)
                     $obs_final = $col_config['db_obs_detalle'] ? $col_config['db_obs_detalle'] . ". " : "";
                     $obs_final .= $observaciones_columna;
@@ -80,11 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tipo_usuario === 'profesor' && iss
                                   AND tipo = ? 
                                   AND instancia = ?";
                     if ($col_config['db_obs_detalle']) {
-                         $sql_check .= " AND observaciones LIKE '" . $mysqli->real_escape_string($col_config['db_obs_detalle']) . "%'";
+                        $sql_check .= " AND observaciones LIKE '" . $mysqli->real_escape_string($col_config['db_obs_detalle']) . "%'";
                     } else {
-                         $sql_check .= " AND (observaciones IS NULL OR observaciones NOT LIKE 'Práctico %' OR observaciones NOT LIKE 'Recuperatorio %' OR observaciones NOT LIKE 'Extraordinario%' OR observaciones NOT LIKE 'Trabajo de Campo%')";
+                        $sql_check .= " AND (observaciones IS NULL OR observaciones NOT LIKE 'Práctico %' OR observaciones NOT LIKE 'Recuperatorio %' OR observaciones NOT LIKE 'Extraordinario%' OR observaciones NOT LIKE 'Trabajo de Campo%')";
                     }
-                    
+
                     $stmt_check = $mysqli->prepare($sql_check);
                     $stmt_check->bind_param("iss", $ic_id, $col_config['db_tipo'], $col_config['db_instancia']);
                     $stmt_check->execute();
@@ -166,12 +166,12 @@ if ($tipo_usuario === 'preceptor' && isset($_POST['registro_lote'], $_POST['fech
             // Idealmente, la BD permitiría NULL o habría un profesor "sistema".
             // COMO SOLUCIÓN TEMPORAL, Y ASUMIENDO QUE DEBE HABER UN PROFESOR, si no se encuentra, la inserción fallará o usará un ID inválido si no se maneja.
             // Para evitar error, usamos el profesor_id del preceptor (si es también profesor) o el primer profesor del sistema.
-             if(!$profesor_id_para_preceptor){
+            if (!$profesor_id_para_preceptor) {
                 $q_any_prof = $mysqli->query("SELECT id FROM profesor LIMIT 1");
-                if($d_any_prof = $q_any_prof->fetch_assoc()){
+                if ($d_any_prof = $q_any_prof->fetch_assoc()) {
                     $profesor_id_para_preceptor = $d_any_prof['id']; // ¡Esto es un placeholder!
                 } else {
-                     die("Error crítico: No hay profesores en el sistema para asignar la evaluación y el campo profesor_id es NOT NULL.");
+                    die("Error crítico: No hay profesores en el sistema para asignar la evaluación y el campo profesor_id es NOT NULL.");
                 }
             }
         }
@@ -185,8 +185,8 @@ if ($tipo_usuario === 'preceptor' && isset($_POST['registro_lote'], $_POST['fech
 
             $stmt = $mysqli->prepare("INSERT INTO evaluacion (inscripcion_cursado_id, tipo, instancia, fecha, nota, nota_letra, profesor_id, observaciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             // Asegurar que profesor_id_para_preceptor tenga un valor válido antes de hacer bind.
-            if(!$profesor_id_para_preceptor) $profesor_id_para_preceptor = 1; // Fallback muy básico, ajustar.
-            
+            if (!$profesor_id_para_preceptor) $profesor_id_para_preceptor = 1; // Fallback muy básico, ajustar.
+
             $stmt->bind_param("isssisis", $ic_id, $tipo, $instancia, $fecha, $nota, $nota_letra, $profesor_id_para_preceptor, $obs);
             $stmt->execute();
             $stmt->close();
@@ -230,7 +230,7 @@ if ($tipo_usuario === 'profesor' && $profesor_id) {
         $materia_id_seleccionada = $asignaciones_prof[0]['materia_id'];
         $curso_id_seleccionado = $asignaciones_prof[0]['curso_id'];
     }
-    
+
     if ($materia_id_seleccionada && $curso_id_seleccionado) {
         // Obtener nombre de materia y curso para mostrar
         foreach ($asignaciones_prof as $asig) {
@@ -260,20 +260,20 @@ if ($tipo_usuario === 'profesor' && $profesor_id) {
                 $sql_eval = "SELECT id, nota, observaciones FROM evaluacion 
                              WHERE inscripcion_cursado_id = ? AND tipo = ? AND instancia = ?";
                 $params_eval = [$alumno['inscripcion_cursado_id'], $col['db_tipo'], $col['db_instancia']];
-                
+
                 if ($col['db_obs_detalle']) {
                     $sql_eval .= " AND observaciones LIKE ?";
                     $params_eval[] = $col['db_obs_detalle'] . "%";
                 } else {
                     // Evitar que coincida con los que SÍ tienen detalle identificador en observaciones
-                     $sql_eval .= " AND (observaciones IS NULL OR (observaciones NOT LIKE 'Práctico %' AND observaciones NOT LIKE 'Recuperatorio %' AND observaciones NOT LIKE 'Extraordinario%' AND observaciones NOT LIKE 'Trabajo de Campo%'))";
+                    $sql_eval .= " AND (observaciones IS NULL OR (observaciones NOT LIKE 'Práctico %' AND observaciones NOT LIKE 'Recuperatorio %' AND observaciones NOT LIKE 'Extraordinario%' AND observaciones NOT LIKE 'Trabajo de Campo%'))";
                 }
                 $sql_eval .= " LIMIT 1";
 
                 $stmt_eval = $mysqli->prepare($sql_eval);
                 $types = str_repeat('s', count($params_eval)); // generar la cadena de tipos
                 $stmt_eval->bind_param($types, ...$params_eval); // desempaquetar params
-                
+
                 $stmt_eval->execute();
                 $res_eval = $stmt_eval->get_result();
                 if ($data_eval = $res_eval->fetch_assoc()) {
@@ -343,25 +343,97 @@ if (isset($_GET['feedback'])) {
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Evaluaciones - ISEF</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 15px; font-size: 0.9em; }
-        th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        td input[type="text"], td input[type="number"] { width: 50px; padding: 3px; box-sizing: border-box; }
-        td input.obs-col { width: 100px; }
-        td input.obs-gen { width: 150px; }
-        .form-section { margin-bottom: 30px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 5px; }
-        .form-section h2 { margin-top: 0; }
-        label { display: block; margin-bottom: 5px; }
-        select, input[type="date"], button { padding: 8px; margin-bottom:10px; border-radius: 3px; border: 1px solid #ccc; }
-        button { background-color: #007bff; color: white; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
-        .feedback { padding: 10px; margin-bottom: 15px; border-radius: 3px; color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb;}
-        .small-text { font-size: 0.8em; color: #666; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        td input[type="text"],
+        td input[type="number"] {
+            width: 50px;
+            padding: 3px;
+            box-sizing: border-box;
+        }
+
+        td input.obs-col {
+            width: 100px;
+        }
+
+        td input.obs-gen {
+            width: 150px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+        }
+
+        .form-section h2 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        select,
+        input[type="date"],
+        button {
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .feedback {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .small-text {
+            font-size: 0.8em;
+            color: #666;
+        }
     </style>
     <script>
         function cambiarMateriaCursoProfesor() {
@@ -370,26 +442,28 @@ if (isset($_GET['feedback'])) {
             if (materiaId && cursoId) {
                 window.location.href = `evaluaciones.php?materia_id=${materiaId}&curso_id=${cursoId}`;
             } else if (materiaId) { // Si solo selecciona materia, buscar cursos para esa materia
-                 window.location.href = `evaluaciones.php?materia_id=${materiaId}`;
+                window.location.href = `evaluaciones.php?materia_id=${materiaId}`;
             }
         }
-         function submitPreceptorForm() {
+
+        function submitPreceptorForm() {
             const cursoId = document.getElementById('preceptor_curso_id').value;
             const materiaId = document.getElementById('preceptor_materia_id') ? document.getElementById('preceptor_materia_id').value : null;
-            
+
             let url = 'evaluaciones.php?';
             if (cursoId) url += 'curso_id=' + cursoId;
             if (materiaId) url += (cursoId ? '&' : '') + 'materia_id=' + materiaId;
-            
+
             window.location.href = url;
         }
     </script>
 </head>
+
 <body>
     <h1>Gestión de Evaluaciones</h1>
     <p><a href="dashboard.php">&laquo; Volver al menú</a></p>
 
-   <?php if ($mensaje_feedback): ?>
+    <?php if ($mensaje_feedback): ?>
         <div class="feedback"><?= $mensaje_feedback ?></div>
     <?php endif; ?>
 
@@ -476,7 +550,7 @@ if (isset($_GET['feedback'])) {
                                         <td><?= htmlspecialchars($alumno['condicion_cursado']) ?></td>
                                         <td>
                                             <?php foreach ($columnas_evaluacion_grilla as $col): ?>
-                                                 <?php endforeach; ?>
+                                            <?php endforeach; ?>
                                             (Ver observaciones al guardar)
                                         </td>
                                         <td><input type="text" class="obs-gen" name="observaciones_generales_alumno[<?= $alumno['inscripcion_cursado_id'] ?>]" placeholder="Generales"></td>
@@ -497,7 +571,7 @@ if (isset($_GET['feedback'])) {
             <?php endif; ?>
         </div>
         <hr>
-        <?php elseif ($tipo_usuario === 'preceptor'): ?>
+    <?php elseif ($tipo_usuario === 'preceptor'): ?>
         <div class="form-section">
             <h2>Registro en Lote (Preceptor)</h2>
             <form method="get" id="preceptorForm" action="evaluaciones.php">
@@ -510,7 +584,7 @@ if (isset($_GET['feedback'])) {
                         </option>
                     <?php endwhile; ?>
                 </select>
-            
+
                 <?php if ($materias_res): ?>
                     <label for="preceptor_materia_id">Materia:</label>
                     <select name="materia_id" id="preceptor_materia_id" required onchange="submitPreceptorForm();">
@@ -576,8 +650,15 @@ if (isset($_GET['feedback'])) {
             <table>
                 <thead>
                     <tr>
-                        <th>Alumno</th><th>Materia</th><th>Curso</th><th>Fecha</th>
-                        <th>Tipo</th><th>Instancia</th><th>Nota</th><th>Letra</th><th>Observaciones</th>
+                        <th>Alumno</th>
+                        <th>Materia</th>
+                        <th>Curso</th>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Instancia</th>
+                        <th>Nota</th>
+                        <th>Letra</th>
+                        <th>Observaciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -602,6 +683,7 @@ if (isset($_GET['feedback'])) {
     </div>
 
 </body>
+
 </html>
 
 <?php
