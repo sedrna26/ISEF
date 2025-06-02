@@ -5,10 +5,10 @@ session_start();
 // Incluir el archivo de conexión a la base de datos
 require_once 'config/db.php';
 
-
 $conn = $mysqli;
 
 $error = '';
+$logout_message = '';
 
 // Si se envió el formulario de login
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['password'])) {
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
 if (isset($_GET['logout'])) {
     $_SESSION = [];
     session_destroy();
-    $error = "Sesión cerrada correctamente.";
+    $logout_message = "Sesión cerrada correctamente.";
 }
 
 // Cerrar la conexión al final
@@ -160,6 +160,11 @@ $conn->close();
             border-radius: 4px;
             margin-bottom: 20px;
             text-align: center;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .success.fade-out {
+            opacity: 0;
         }
 
         .info {
@@ -189,6 +194,10 @@ $conn->close();
             <div class="error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
+        <?php if (!empty($logout_message)): ?>
+            <div class="success" id="logout-message"><?= htmlspecialchars($logout_message) ?></div>
+        <?php endif; ?>
+
         <?php if (isset($_SESSION['mensaje'])): ?>
             <div class="success"><?= htmlspecialchars($_SESSION['mensaje']) ?></div>
             <?php unset($_SESSION['mensaje']); ?>
@@ -214,6 +223,21 @@ $conn->close();
             El sistema le solicitará cambiarla por seguridad.
         </div>
     </div>
+
+    <script>
+        // Auto-ocultar mensaje de logout después de 3 segundos
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoutMessage = document.getElementById('logout-message');
+            if (logoutMessage) {
+                setTimeout(function() {
+                    logoutMessage.classList.add('fade-out');
+                    setTimeout(function() {
+                        logoutMessage.style.display = 'none';
+                    }, 500); // Esperar a que termine la animación de fade
+                }, 3000); // 3 segundos
+            }
+        });
+    </script>
 </body>
 
 </html>

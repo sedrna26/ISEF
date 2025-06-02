@@ -165,16 +165,11 @@ $mysqli->close();
                 </a>
                 <a href="admin_inscripcion_manual.php" class="menu-item">
                     <strong>Inscripción Manual de Alumnos</strong><br>
-                    <small>Inscribir alumnos a materias manualmente</small>
+                    <small>Inscribir alumnos a materias a cursar</small>
                 </a>
-
-                <!-- Nuevos enlaces para gestión de exámenes -->
-                <a href="admin_mesas_examen.php" class="menu-item">
-                    <strong>Gestión de Mesas de Examen</strong><br>
-                    <small>Crear y administrar mesas de examen final</small>
-                </a>
+                
                 <a href="admin_periodos_examen.php" class="menu-item">
-                    <strong>Gestión de Períodos de Examen</strong><br>
+                    <strong>Gestión de Mesas y Períodos de Examen</strong><br>
                     <small>Definir períodos de inscripción a exámenes</small>
                 </a>
 
@@ -200,7 +195,7 @@ $mysqli->close();
 
         <?php if ($_SESSION['tipo'] === 'alumno'): ?>
             <div class="menu">
-                <a href="inscripciones.php" class="menu-item">
+                <a href="inscripciones_alumno_materia.php" class="menu-item">
                     <strong>Inscripciones</strong><br>
                     <small>Inscribirse a materias y cursos</small>
                 </a>

@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("iis", $_POST['materia_id'], $_POST['materia_correlativa_id'], $_POST['tipo']);
         $stmt->execute();
         $stmt->close();
-    } elseif ($_POST['accion'] === 'modificar') { // <<< NUEVO BLOQUE IF
+    } elseif ($_POST['accion'] === 'modificar') { 
         if (isset($_POST['edit_correlatividad_id'], $_POST['materia_id'], $_POST['materia_correlativa_id'], $_POST['tipo']) && !empty($_POST['edit_correlatividad_id'])) {
             $stmt = $mysqli->prepare("UPDATE correlatividad SET materia_id = ?, materia_correlativa_id = ?, tipo = ? WHERE id = ?");
             $stmt->bind_param("iisi", $_POST['materia_id'], $_POST['materia_correlativa_id'], $_POST['tipo'], $_POST['edit_correlatividad_id']);
@@ -106,10 +106,9 @@ $materias = $mysqli->query("SELECT id, nombre FROM materia ORDER BY nombre");
                 <option value="regular">Regular</option>
                 <option value="aprobada">Aprobada</option>
                 <option value="cursada">Cursada</option>
-                 {/* Nuevos tipos según tabla `correlatividad` en bd_isef.txt */}
-                <option value="Para cursar regularizada">Para cursar regularizada</option> {/* [cite: 111] */}
-                <option value="Para cursar acreditada">Para cursar acreditada</option> {/* [cite: 111] */}
-                <option value="Para acreditar">Para acreditar</option> {/* [cite: 111] */}
+                <option value="Para cursar regularizada">Para cursar regularizada</option> 
+                <option value="Para cursar acreditada">Para cursar acreditada</option> 
+                <option value="Para acreditar">Para acreditar</option> 
             </select>
         </label>
     </div>

@@ -8,7 +8,7 @@ $_SESSION = [];
 // Destruir la sesión
 session_destroy();
 
-// Redirigir al login
-header("Location: ../index.php");
+// Redirigir al login con parámetro para mostrar mensaje
+header("Location: ../index.php?logout=1");
 exit;
 ?>

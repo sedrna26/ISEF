@@ -1,18 +1,18 @@
 <?php
 // asistencias.php - Gestión de asistencias para profesores y preceptores
-session_start(); //
-if (!isset($_SESSION['usuario_id']) || !in_array($_SESSION['tipo'], ['profesor', 'preceptor'])) { //
-    header("Location: ../index.php"); //
-    exit; //
+session_start(); 
+if (!isset($_SESSION['usuario_id']) || !in_array($_SESSION['tipo'], ['profesor', 'preceptor'])) { 
+    header("Location: ../index.php"); 
+    exit; 
 }
 
-$mysqli = new mysqli("localhost", "root", "", "isef_sistema"); //
-if ($mysqli->connect_errno) { //
-    die("Fallo la conexión: " . $mysqli->connect_error); //
+$mysqli = new mysqli("localhost", "root", "", "isef_sistema"); 
+if ($mysqli->connect_errno) { 
+    die("Fallo la conexión: " . $mysqli->connect_error); 
 }
 
-setlocale(LC_TIME, 'es_AR.UTF-8', 'es_ES.UTF-8', 'es_ES', 'esp', 'spanish'); //
-$meses_en_espanol = [ //
+setlocale(LC_TIME, 'es_AR.UTF-8', 'es_ES.UTF-8', 'es_ES', 'esp', 'spanish'); 
+$meses_en_espanol = [ 
     1 => "Enero",
     2 => "Febrero",
     3 => "Marzo",
@@ -26,9 +26,9 @@ $meses_en_espanol = [ //
     11 => "Noviembre",
     12 => "Diciembre"
 ];
-$usuario_id = $_SESSION['usuario_id']; //
-$tipo_usuario = $_SESSION['tipo']; //
-$profesor_id = null; // Para la carga de asistencia //
+$usuario_id = $_SESSION['usuario_id']; 
+$tipo_usuario = $_SESSION['tipo']; 
+$profesor_id = null; 
 
 if ($tipo_usuario === 'profesor') {
     $profesor_res = $mysqli->query("
@@ -36,22 +36,21 @@ if ($tipo_usuario === 'profesor') {
         FROM profesor p
         JOIN persona per ON p.persona_id = per.id
         WHERE per.usuario_id = $usuario_id
-    "); //
-    $profesor_data = $profesor_res->fetch_assoc(); //
-    $profesor_id = $profesor_data ? $profesor_data['profesor_id'] : null; //
+    "); 
+    $profesor_data = $profesor_res->fetch_assoc(); 
+    $profesor_id = $profesor_data ? $profesor_data['profesor_id'] : null; 
 } else {
-    $profesor_res = $mysqli->query("SELECT id FROM profesor LIMIT 1"); //
-    $profesor_data = $profesor_res->fetch_assoc(); //
+    $profesor_res = $mysqli->query("SELECT id FROM profesor LIMIT 1"); 
+    $profesor_data = $profesor_res->fetch_assoc(); 
     $profesor_id_preceptor_default = $profesor_data ? $profesor_data['id'] : null;
 }
 
-$mensaje_feedback = ''; //
-$redirect_url_params = ''; //
+$mensaje_feedback = ''; 
+$redirect_url_params = ''; 
 
 // --- Variables para la planilla del Preceptor ---
 $curso_id_seleccionado_preceptor = isset($_REQUEST['curso_id_pre']) ? (int)$_REQUEST['curso_id_pre'] : null;
 $materia_id_seleccionada_preceptor = isset($_REQUEST['materia_id_pre']) ? (int)$_REQUEST['materia_id_pre'] : null;
-// MODIFICADO: Asegurar que (int) se aplique a date('m') también
 $mes_seleccionado_preceptor = isset($_REQUEST['mes_pre']) ? (int)$_REQUEST['mes_pre'] : (int)date('m');
 $anio_seleccionado_preceptor = isset($_REQUEST['anio_pre']) ? (int)$_REQUEST['anio_pre'] : date('Y');
 $mostrar_planilla_preceptor = isset($_REQUEST['mostrar_planilla_preceptor']);
@@ -74,74 +73,61 @@ if ($tipo_usuario === 'profesor') {
 }
 
 
-// --- Variables para la planilla del Profesor ---
-$materia_id_seleccionada_profesor = null;
-$curso_id_seleccionado_profesor = null;
-$mes_seleccionado_profesor = date('m');
-$anio_seleccionado_profesor = date('Y');
-$mostrar_planilla_profesor = false;
-
-if ($tipo_usuario === 'profesor') {
-    $materia_id_seleccionada_profesor = isset($_REQUEST['materia_id_prof']) ? (int)$_REQUEST['materia_id_prof'] : null;
-    $curso_id_seleccionado_profesor = isset($_REQUEST['curso_id_prof']) ? (int)$_REQUEST['curso_id_prof'] : null;
-    $mes_seleccionado_profesor = isset($_REQUEST['mes_prof']) ? (int)$_REQUEST['mes_prof'] : date('m');
-    $anio_seleccionado_profesor = isset($_REQUEST['anio_prof']) ? (int)$_REQUEST['anio_prof'] : date('Y');
-    $mostrar_planilla_profesor = isset($_REQUEST['mostrar_planilla_profesor']);
-}
 
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') { // [cite: 244]
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') { 
     // Guardar Planilla de Asistencia (Preceptor)
-    if (isset($_POST['guardar_planilla_asistencia_preceptor']) && $tipo_usuario === 'preceptor') { // [cite: 247]
-        $asistencias_planilla = $_POST['asistencias_planilla_pre'] ?? []; // [cite: 247]
-        $curso_id_post = (int)$_POST['curso_id_pre_hidden']; // [cite: 248]
-        $materia_id_post = (int)$_POST['materia_id_pre_hidden']; // [cite: 248]
-        $mes_post = (int)$_POST['mes_pre_hidden']; // [cite: 248]
-        $anio_post = (int)$_POST['anio_pre_hidden']; // [cite: 248]
-        $redirect_url_params = "&curso_id_pre=$curso_id_post&materia_id_pre=$materia_id_post&mes_pre=$mes_post&anio_pre=$anio_post&mostrar_planilla_preceptor=1"; // [cite: 248]
+    if (isset($_POST['guardar_planilla_asistencia_preceptor']) && $tipo_usuario === 'preceptor') { 
+        $asistencias_planilla = $_POST['asistencias_planilla_pre'] ?? []; 
+        $curso_id_post = (int)$_POST['curso_id_pre_hidden']; 
+        $materia_id_post = (int)$_POST['materia_id_pre_hidden']; 
+        $mes_post = (int)$_POST['mes_pre_hidden']; 
+        $anio_post = (int)$_POST['anio_pre_hidden']; 
+        $redirect_url_params = "&curso_id_pre=$curso_id_post&materia_id_pre=$materia_id_post&mes_pre=$mes_post&anio_pre=$anio_post&mostrar_planilla_preceptor=1"; 
 
         $profesor_a_usar_preceptor = $profesor_id_preceptor_default; // El preceptor usa el profesor por defecto
         // Opcional: si el preceptor debe seleccionar un profesor específico para la materia,
         // ese ID vendría del formulario. Por ahora, se usa el default.
 
-        if (!$profesor_a_usar_preceptor) { // [cite: 249]
-            $mensaje_feedback = "Error: No se pudo determinar un profesor para asignar la asistencia (Preceptor)."; // [cite: 249]
+        if (!$profesor_a_usar_preceptor) { 
+            $mensaje_feedback = "Error: No se pudo determinar un profesor para asignar la asistencia (Preceptor)."; 
         } else {
-            foreach ($asistencias_planilla as $ic_id => $fechas) { // [cite: 250]
-                foreach ($fechas as $fecha_str => $estado) { // [cite: 250]
-                    $ic_id_int = (int)$ic_id; // [cite: 250]
-                    $stmt_check = $mysqli->prepare("SELECT id FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha = ?"); // [cite: 251]
-                    $stmt_check->bind_param("is", $ic_id_int, $fecha_str); // [cite: 252]
-                    $stmt_check->execute(); // [cite: 252]
-                    $res_check = $stmt_check->get_result(); // [cite: 252]
-                    $asistencia_existente = $res_check->fetch_assoc(); // [cite: 252]
-                    $stmt_check->close(); // [cite: 252]
+            foreach ($asistencias_planilla as $ic_id => $fechas) { 
+                foreach ($fechas as $fecha_str => $estado) { 
+                    $ic_id_int = (int)$ic_id; 
+                    $stmt_check = $mysqli->prepare("SELECT id FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha = ?"); 
+                    $stmt_check->bind_param("is", $ic_id_int, $fecha_str); 
+                    $stmt_check->execute(); 
+                    $res_check = $stmt_check->get_result(); 
+                    $asistencia_existente = $res_check->fetch_assoc(); 
+                    $stmt_check->close(); 
 
-                    if (!empty($estado)) { // [cite: 253]
-                        if ($asistencia_existente) { // [cite: 253]
-                            $stmt_update = $mysqli->prepare("UPDATE asistencia SET estado = ?, profesor_id = ? WHERE id = ?"); // [cite: 253]
-                            $stmt_update->bind_param("sii", $estado, $profesor_a_usar_preceptor, $asistencia_existente['id']); // [cite: 254]
-                            $stmt_update->execute(); // [cite: 254]
-                            $stmt_update->close(); // [cite: 254]
-                        } else { // [cite: 254]
-                            $stmt_insert = $mysqli->prepare("INSERT INTO asistencia (inscripcion_cursado_id, fecha, estado, profesor_id) VALUES (?, ?, ?, ?)"); // [cite: 254]
-                            $stmt_insert->bind_param("issi", $ic_id_int, $fecha_str, $estado, $profesor_a_usar_preceptor); // [cite: 255]
-                            $stmt_insert->execute(); // [cite: 255]
-                            $stmt_insert->close(); // [cite: 255]
+                    if (!empty($estado)) { 
+                        if ($asistencia_existente) { 
+                            $stmt_update = $mysqli->prepare("UPDATE asistencia SET estado = ?, profesor_id = ? WHERE id = ?"); 
+                            $stmt_update->bind_param("sii", $estado, $profesor_a_usar_preceptor, $asistencia_existente['id']); 
+                            $stmt_update->execute(); 
+                            $stmt_update->close(); 
+                        } else { 
+                            $stmt_insert = $mysqli->prepare("INSERT INTO asistencia (inscripcion_cursado_id, fecha, estado, profesor_id) VALUES (?, ?, ?, ?)"); 
+                            $stmt_insert->bind_param("issi", $ic_id_int, $fecha_str, $estado, $profesor_a_usar_preceptor); 
+                            $stmt_insert->execute(); 
+                            $stmt_insert->close(); 
                         }
-                    } else { // [cite: 255]
-                        if ($asistencia_existente) { // [cite: 255]
-                            $stmt_delete = $mysqli->prepare("DELETE FROM asistencia WHERE id = ?"); // [cite: 255]
-                            $stmt_delete->bind_param("i", $asistencia_existente['id']); // [cite: 256]
-                            $stmt_delete->execute(); // [cite: 256]
-                            $stmt_delete->close(); // [cite: 256]
+                    } else { 
+                        if ($asistencia_existente) { 
+                            $stmt_delete = $mysqli->prepare("DELETE FROM asistencia WHERE id = ?"); 
+                            $stmt_delete->bind_param("i", $asistencia_existente['id']); 
+                            $stmt_delete->execute(); 
+                            $stmt_delete->close(); 
                         }
                     }
                 }
             }
-            $mensaje_feedback = "Planilla de asistencias (Preceptor) guardada correctamente."; // [cite: 256]
+            $mensaje_feedback = "Planilla de asistencias (Preceptor) guardada correctamente."; 
         }
-        header("Location: asistencias.php?feedback=" . urlencode($mensaje_feedback) . $redirect_url_params); // [cite: 257]
+        header("Location: asistencias.php?feedback=" . urlencode($mensaje_feedback) . $redirect_url_params); 
         exit; // [cite: 257]
     }
 
@@ -160,29 +146,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // [cite: 244]
             foreach ($asistencias_planilla as $ic_id => $fechas) {
                 foreach ($fechas as $fecha_str => $estado) {
                     $ic_id_int = (int)$ic_id;
-                    $stmt_check = $mysqli->prepare("SELECT id FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha = ?"); // [cite: 251]
-                    $stmt_check->bind_param("is", $ic_id_int, $fecha_str); // [cite: 252]
+                    $stmt_check = $mysqli->prepare("SELECT id FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha = ?"); 
+                    $stmt_check->bind_param("is", $ic_id_int, $fecha_str); 
                     $stmt_check->execute();
                     $res_check = $stmt_check->get_result();
                     $asistencia_existente = $res_check->fetch_assoc();
-                    $stmt_check->close(); // [cite: 252]
+                    $stmt_check->close(); 
 
                     if (!empty($estado)) {
                         if ($asistencia_existente) {
-                            $stmt_update = $mysqli->prepare("UPDATE asistencia SET estado = ?, profesor_id = ? WHERE id = ?"); // [cite: 253]
-                            $stmt_update->bind_param("sii", $estado, $profesor_id, $asistencia_existente['id']); // Usa $profesor_id del profesor logueado // [cite: 254]
+                            $stmt_update = $mysqli->prepare("UPDATE asistencia SET estado = ?, profesor_id = ? WHERE id = ?"); 
+                            $stmt_update->bind_param("sii", $estado, $profesor_id, $asistencia_existente['id']); // Usa $profesor_id del profesor logueado 
                             $stmt_update->execute();
                             $stmt_update->close();
                         } else {
-                            $stmt_insert = $mysqli->prepare("INSERT INTO asistencia (inscripcion_cursado_id, fecha, estado, profesor_id) VALUES (?, ?, ?, ?)"); // [cite: 254]
-                            $stmt_insert->bind_param("issi", $ic_id_int, $fecha_str, $estado, $profesor_id); // Usa $profesor_id del profesor logueado // [cite: 255]
+                            $stmt_insert = $mysqli->prepare("INSERT INTO asistencia (inscripcion_cursado_id, fecha, estado, profesor_id) VALUES (?, ?, ?, ?)"); 
+                            $stmt_insert->bind_param("issi", $ic_id_int, $fecha_str, $estado, $profesor_id); // Usa $profesor_id del profesor logueado 
                             $stmt_insert->execute();
                             $stmt_insert->close();
                         }
                     } else {
                         if ($asistencia_existente) {
-                            $stmt_delete = $mysqli->prepare("DELETE FROM asistencia WHERE id = ?"); // [cite: 255]
-                            $stmt_delete->bind_param("i", $asistencia_existente['id']); // [cite: 256]
+                            $stmt_delete = $mysqli->prepare("DELETE FROM asistencia WHERE id = ?"); 
+                            $stmt_delete->bind_param("i", $asistencia_existente['id']); 
                             $stmt_delete->execute();
                             $stmt_delete->close();
                         }
@@ -198,10 +184,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') { // [cite: 244]
 
 
 // Cargar datos según el rol
-$cursos_preceptor_res = null; // [cite: 258]
-$materias_preceptor_res = null; // [cite: 258]
-$alumnos_planilla_preceptor = []; // [cite: 259]
-$asistencias_cargadas_planilla_preceptor = []; // [cite: 259]
+$cursos_preceptor_res = null; 
+$materias_preceptor_res = null; 
+$alumnos_planilla_preceptor = []; 
+$asistencias_cargadas_planilla_preceptor = []; 
 
 $materias_profesor_res = null;
 $cursos_profesor_res = null;
@@ -239,19 +225,19 @@ if ($tipo_usuario === 'profesor') {
                 ORDER BY p.apellidos, p.nombres
             "); // [cite: 264]
             if ($query_alumnos_prof) {
-                while ($alumno_prof = $query_alumnos_prof->fetch_assoc()) { // [cite: 266]
+                while ($alumno_prof = $query_alumnos_prof->fetch_assoc()) { 
                     $alumnos_planilla_profesor[] = $alumno_prof;
-                    $fecha_inicio_mes_prof = $anio_seleccionado_profesor . "-" . str_pad($mes_seleccionado_profesor, 2, '0', STR_PAD_LEFT) . "-01"; // [cite: 267]
-                    $fecha_fin_mes_prof = date("Y-m-t", strtotime($fecha_inicio_mes_prof)); // [cite: 268]
+                    $fecha_inicio_mes_prof = $anio_seleccionado_profesor . "-" . str_pad($mes_seleccionado_profesor, 2, '0', STR_PAD_LEFT) . "-01"; 
+                    $fecha_fin_mes_prof = date("Y-m-t", strtotime($fecha_inicio_mes_prof)); 
 
-                    $stmt_asist_prof = $mysqli->prepare("SELECT fecha, estado FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha BETWEEN ? AND ?"); // [cite: 269]
-                    $stmt_asist_prof->bind_param("iss", $alumno_prof['inscripcion_cursado_id'], $fecha_inicio_mes_prof, $fecha_fin_mes_prof); // [cite: 270]
-                    $stmt_asist_prof->execute(); // [cite: 270]
-                    $res_asist_prof = $stmt_asist_prof->get_result(); // [cite: 270]
-                    while ($asist_prof = $res_asist_prof->fetch_assoc()) { // [cite: 270]
-                        $asistencias_cargadas_planilla_profesor[$alumno_prof['inscripcion_cursado_id']][$asist_prof['fecha']] = $asist_prof['estado']; // [cite: 270]
+                    $stmt_asist_prof = $mysqli->prepare("SELECT fecha, estado FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha BETWEEN ? AND ?"); 
+                    $stmt_asist_prof->bind_param("iss", $alumno_prof['inscripcion_cursado_id'], $fecha_inicio_mes_prof, $fecha_fin_mes_prof); 
+                    $stmt_asist_prof->execute(); 
+                    $res_asist_prof = $stmt_asist_prof->get_result(); 
+                    while ($asist_prof = $res_asist_prof->fetch_assoc()) { 
+                        $asistencias_cargadas_planilla_profesor[$alumno_prof['inscripcion_cursado_id']][$asist_prof['fecha']] = $asist_prof['estado']; 
                     }
-                    $stmt_asist_prof->close(); // [cite: 271]
+                    $stmt_asist_prof->close(); 
                 }
             }
         }
@@ -262,7 +248,7 @@ if ($tipo_usuario === 'profesor') {
         FROM curso c
         ORDER BY c.ciclo_lectivo DESC, c.codigo, c.division
     "); // [cite: 262]
-    if ($curso_id_seleccionado_preceptor) { // [cite: 263]
+    if ($curso_id_seleccionado_preceptor) { 
         $materias_preceptor_res = $mysqli->query("
             SELECT DISTINCT m.id, m.nombre
             FROM inscripcion_cursado ic
@@ -272,7 +258,7 @@ if ($tipo_usuario === 'profesor') {
         "); // [cite: 263]
     }
 
-    if ($mostrar_planilla_preceptor && $curso_id_seleccionado_preceptor && $materia_id_seleccionada_preceptor && $mes_seleccionado_preceptor && $anio_seleccionado_preceptor) { // [cite: 264]
+    if ($mostrar_planilla_preceptor && $curso_id_seleccionado_preceptor && $materia_id_seleccionada_preceptor && $mes_seleccionado_preceptor && $anio_seleccionado_preceptor) { 
         $query_alumnos = $mysqli->query("
             SELECT ic.id AS inscripcion_cursado_id, a.legajo, CONCAT(p.apellidos, ', ', p.nombres) AS alumno_nombre
             FROM inscripcion_cursado ic
@@ -280,33 +266,33 @@ if ($tipo_usuario === 'profesor') {
             JOIN persona p ON a.persona_id = p.id
             WHERE ic.curso_id = $curso_id_seleccionado_preceptor AND ic.materia_id = $materia_id_seleccionada_preceptor
             ORDER BY p.apellidos, p.nombres
-        "); // [cite: 264, 265]
+        "); // [c
         if ($query_alumnos) {
-            while ($alumno = $query_alumnos->fetch_assoc()) { // [cite: 266]
-                $alumnos_planilla_preceptor[] = $alumno; // [cite: 266]
-                $fecha_inicio_mes = $anio_seleccionado_preceptor . "-" . str_pad($mes_seleccionado_preceptor, 2, '0', STR_PAD_LEFT) . "-01"; // [cite: 267, 268]
-                $fecha_fin_mes = date("Y-m-t", strtotime($fecha_inicio_mes)); // [cite: 268]
-                $stmt_asist = $mysqli->prepare("SELECT fecha, estado FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha BETWEEN ? AND ?"); // [cite: 269]
-                $stmt_asist->bind_param("iss", $alumno['inscripcion_cursado_id'], $fecha_inicio_mes, $fecha_fin_mes); // [cite: 270]
-                $stmt_asist->execute(); // [cite: 270]
-                $res_asist = $stmt_asist->get_result(); // [cite: 270]
-                while ($asist = $res_asist->fetch_assoc()) { // [cite: 270]
-                    $asistencias_cargadas_planilla_preceptor[$alumno['inscripcion_cursado_id']][$asist['fecha']] = $asist['estado']; // [cite: 270]
+            while ($alumno = $query_alumnos->fetch_assoc()) { 
+                $alumnos_planilla_preceptor[] = $alumno; 
+                $fecha_inicio_mes = $anio_seleccionado_preceptor . "-" . str_pad($mes_seleccionado_preceptor, 2, '0', STR_PAD_LEFT) . "-01"; // [c
+                $fecha_fin_mes = date("Y-m-t", strtotime($fecha_inicio_mes)); 
+                $stmt_asist = $mysqli->prepare("SELECT fecha, estado FROM asistencia WHERE inscripcion_cursado_id = ? AND fecha BETWEEN ? AND ?"); 
+                $stmt_asist->bind_param("iss", $alumno['inscripcion_cursado_id'], $fecha_inicio_mes, $fecha_fin_mes); 
+                $stmt_asist->execute(); 
+                $res_asist = $stmt_asist->get_result(); 
+                while ($asist = $res_asist->fetch_assoc()) { 
+                    $asistencias_cargadas_planilla_preceptor[$alumno['inscripcion_cursado_id']][$asist['fecha']] = $asist['estado']; 
                 }
-                $stmt_asist->close(); // [cite: 271]
+                $stmt_asist->close(); 
             }
         }
     }
 }
 
 // Obtener las últimas asistencias registradas con paginación
-$registros_por_pagina = 10; // [cite: 272]
-$pagina_actual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1; // [cite: 273]
-$offset = ($pagina_actual - 1) * $registros_por_pagina; // [cite: 273]
+$registros_por_pagina = 10; 
+$pagina_actual = isset($_GET['pagina']) ? (int)$_GET['pagina'] : 1; 
+$offset = ($pagina_actual - 1) * $registros_por_pagina; 
 
 $query_total_registros_base = "SELECT COUNT(DISTINCT a.id) AS total 
                                FROM asistencia a 
-                               JOIN inscripcion_cursado ic ON a.inscripcion_cursado_id = ic.id"; // [cite: 275]
+                               JOIN inscripcion_cursado ic ON a.inscripcion_cursado_id = ic.id"; 
 $query_asistencias_listado_base = "
     SELECT a.id, a.fecha, a.estado, 
            CONCAT(p_alumno.apellidos, ', ', p_alumno.nombres) as alumno_nombre,
@@ -328,7 +314,7 @@ $params_paginacion = '';
 
 if ($tipo_usuario === 'profesor') {
     if ($profesor_id) {
-        $filtros_listado .= " AND a.profesor_id = $profesor_id "; // [cite: 282]
+        $filtros_listado .= " AND a.profesor_id = $profesor_id "; 
     }
     // Mantener los filtros de la planilla del profesor en la paginación del listado si están activos
     if ($materia_id_seleccionada_profesor) $params_paginacion .= "&materia_id_prof=$materia_id_seleccionada_profesor";
@@ -338,43 +324,43 @@ if ($tipo_usuario === 'profesor') {
     if ($mostrar_planilla_profesor) $params_paginacion .= "&mostrar_planilla_profesor=1";
 } else if ($tipo_usuario === 'preceptor') {
     if ($curso_id_seleccionado_preceptor) {
-        $filtros_listado .= " AND ic.curso_id = $curso_id_seleccionado_preceptor"; // [cite: 277, 283]
-        $params_paginacion .= "&curso_id_pre=$curso_id_seleccionado_preceptor"; // [cite: 380]
+        $filtros_listado .= " AND ic.curso_id = $curso_id_seleccionado_preceptor"; 
+        $params_paginacion .= "&curso_id_pre=$curso_id_seleccionado_preceptor"; 
     }
     if ($materia_id_seleccionada_preceptor) {
-        $filtros_listado .= " AND ic.materia_id = $materia_id_seleccionada_preceptor"; // [cite: 277, 284]
-        $params_paginacion .= "&materia_id_pre=$materia_id_seleccionada_preceptor"; // [cite: 380]
+        $filtros_listado .= " AND ic.materia_id = $materia_id_seleccionada_preceptor"; 
+        $params_paginacion .= "&materia_id_pre=$materia_id_seleccionada_preceptor"; 
     }
-    if ($mes_seleccionado_preceptor) $params_paginacion .= "&mes_pre=$mes_seleccionado_preceptor"; // [cite: 380]
-    if ($anio_seleccionado_preceptor) $params_paginacion .= "&anio_pre=$anio_seleccionado_preceptor"; // [cite: 380]
-    if ($mostrar_planilla_preceptor) $params_paginacion .= "&mostrar_planilla_preceptor=1"; // [cite: 381]
+    if ($mes_seleccionado_preceptor) $params_paginacion .= "&mes_pre=$mes_seleccionado_preceptor"; 
+    if ($anio_seleccionado_preceptor) $params_paginacion .= "&anio_pre=$anio_seleccionado_preceptor"; 
+    if ($mostrar_planilla_preceptor) $params_paginacion .= "&mostrar_planilla_preceptor=1"; 
 }
 
 $query_total_registros = $query_total_registros_base . $filtros_listado;
 $total_registros_res = $mysqli->query($query_total_registros);
-$total_registros = $total_registros_res ? $total_registros_res->fetch_assoc()['total'] : 0; // [cite: 279]
-$total_paginas = ceil($total_registros / $registros_por_pagina); // [cite: 279]
+$total_registros = $total_registros_res ? $total_registros_res->fetch_assoc()['total'] : 0; 
+$total_paginas = ceil($total_registros / $registros_por_pagina); 
 
-$query_asistencias_listado = $query_asistencias_listado_base . $filtros_listado . " ORDER BY a.fecha DESC, alumno_nombre ASC LIMIT $registros_por_pagina OFFSET $offset"; // [cite: 284]
-$asistencias_listado = $mysqli->query($query_asistencias_listado); // [cite: 285]
+$query_asistencias_listado = $query_asistencias_listado_base . $filtros_listado . " ORDER BY a.fecha DESC, alumno_nombre ASC LIMIT $registros_por_pagina OFFSET $offset"; 
+$asistencias_listado = $mysqli->query($query_asistencias_listado); 
 
-if (isset($_GET['feedback'])) { // [cite: 285]
-    $mensaje_feedback = htmlspecialchars($_GET['feedback']); // [cite: 285]
+if (isset($_GET['feedback'])) { 
+    $mensaje_feedback = htmlspecialchars($_GET['feedback']); 
 }
 
 // Obtener todas las materias y cursos para los selectores de PDF
-$materias_pdf_query = "SELECT id, nombre FROM materia ORDER BY nombre"; // [cite: 286]
-$materias_pdf_result = $mysqli->query($materias_pdf_query); // [cite: 286]
-$materias_para_pdf = []; // [cite: 287]
-while ($row = $materias_pdf_result->fetch_assoc()) { // [cite: 287]
-    $materias_para_pdf[] = $row; // [cite: 287]
+$materias_pdf_query = "SELECT id, nombre FROM materia ORDER BY nombre"; 
+$materias_pdf_result = $mysqli->query($materias_pdf_query); 
+$materias_para_pdf = []; 
+while ($row = $materias_pdf_result->fetch_assoc()) { 
+    $materias_para_pdf[] = $row; 
 }
 
-$cursos_pdf_query = "SELECT id, CONCAT(anio, '° ', division, ' (', ciclo_lectivo, ')') AS curso_completo FROM curso ORDER BY ciclo_lectivo DESC, anio, division"; // [cite: 288]
-$cursos_pdf_result = $mysqli->query($cursos_pdf_query); // [cite: 289]
-$cursos_para_pdf = []; // [cite: 289]
-while ($row = $cursos_pdf_result->fetch_assoc()) { // [cite: 289]
-    $cursos_para_pdf[] = $row; // [cite: 290]
+$cursos_pdf_query = "SELECT id, CONCAT(anio, '° ', division, ' (', ciclo_lectivo, ')') AS curso_completo FROM curso ORDER BY ciclo_lectivo DESC, anio, division"; 
+$cursos_pdf_result = $mysqli->query($cursos_pdf_query); 
+$cursos_para_pdf = []; 
+while ($row = $cursos_pdf_result->fetch_assoc()) { 
+    $cursos_para_pdf[] = $row; 
 }
 
 // Para los títulos de las planillas
@@ -434,7 +420,7 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             font-size: 0.9rem;
         }
 
-        /* [cite: 290, 291] */
+        
         table {
             border-collapse: collapse;
             width: 100%;
@@ -442,7 +428,7 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             font-size: 0.85em;
         }
 
-        /* [cite: 291, 292] */
+        
         th,
         td {
             border: 1px solid #ddd;
@@ -450,21 +436,21 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             text-align: left;
         }
 
-        /* [cite: 292] */
+        
         th {
             background-color: #f2f2f2;
             text-align: center;
             vertical-align: middle;
         }
 
-        /* [cite: 293] */
+        
         td.day-cell {
             min-width: 45px;
             text-align: center;
             padding: 2px;
         }
 
-        /* [cite: 294] */
+        
         td.day-cell select {
             padding: 3px;
             font-size: 0.9em;
@@ -474,7 +460,7 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             border: 1px solid #ccc;
         }
 
-        /* [cite: 295] */
+        
         .form-section {
             margin-bottom: 25px;
             padding: 20px;
@@ -483,13 +469,13 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             background-color: #f9f9f9;
         }
 
-        /* [cite: 296] */
+        
         .form-section h2 {
             margin-top: 0;
             font-size: 1.5em;
         }
 
-        /* [cite: 297] */
+        
         label {
             display: inline-block;
             margin-bottom: 5px;
@@ -497,7 +483,7 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             font-weight: 500;
         }
 
-        /* [cite: 298] */
+        
         select,
         input[type="date"],
         input[type="number"],
@@ -509,20 +495,20 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             font-size: 0.9rem;
         }
 
-        /* [cite: 299] */
+        
         .btn-primary {
             background-color: #007bff;
             color: white;
             border-color: #007bff;
         }
 
-        /* [cite: 300] */
+        
         .btn-primary:hover {
             background-color: #0056b3;
             border-color: #0056b3;
         }
 
-        /* [cite: 301] */
+        
         .feedback {
             padding: 10px;
             margin-bottom: 15px;
@@ -532,7 +518,7 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             border: 1px solid #badbcc;
         }
 
-        /* [cite: 302] */
+        
         .error {
             padding: 10px;
             margin-bottom: 15px;
@@ -542,13 +528,13 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             border: 1px solid #f5c2c7;
         }
 
-        /* [cite: 303, 304] */
+        
         .paginacion {
             margin: 20px 0;
             text-align: center;
         }
 
-        /* [cite: 304, 305] */
+        
         .paginacion a,
         .paginacion span {
             color: #0d6efd;
@@ -559,19 +545,19 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             border-radius: 0.25rem;
         }
 
-        /* [cite: 305, 306] */
+        
         .paginacion a:hover {
             background-color: #e9ecef;
         }
 
-        /* [cite: 306] */
+        
         .paginacion span.current {
             background-color: #0d6efd;
             color: white;
             border-color: #0d6efd;
         }
 
-        /* [cite: 307] */
+        
         .sticky-header th {
             position: sticky;
             top: 0;
@@ -579,17 +565,17 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
             background-color: #e9ecef;
         }
 
-        /* [cite: 308] */
+        
         .table-responsive {
             overflow-x: auto;
         }
 
-        /* [cite: 342] */
+        
         .bg-light-weekend {
             background-color: #f8f9fa !important;
         }
 
-        /* [cite: 347] */
+        
     </style>
 </head>
 
@@ -685,9 +671,9 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                                             <th style="width: 80px;">Legajo</th>
                                             <th>Alumno</th>
                                             <?php for ($dia = 1; $dia <= $dias_en_mes_prof; $dia++):
-                                                $fecha_actual_dia = new DateTime("$anio_seleccionado_profesor-$mes_seleccionado_profesor-$dia"); // [cite: 345]
-                                                $nombre_dia_semana = strftime('%a', $fecha_actual_dia->getTimestamp()); // [cite: 346]
-                                                $es_finde = (in_array($nombre_dia_semana, ['Sat', 'Sun', 'Sáb', 'Dom'])); // [cite: 346]
+                                                $fecha_actual_dia = new DateTime("$anio_seleccionado_profesor-$mes_seleccionado_profesor-$dia"); 
+                                                $nombre_dia_semana = strftime('%a', $fecha_actual_dia->getTimestamp()); 
+                                                $es_finde = (in_array($nombre_dia_semana, ['Sat', 'Sun', 'Sáb', 'Dom'])); 
                                             ?>
                                                 <th class="day-cell <?= $es_finde ? 'bg-light-weekend' : '' ?>" title="<?= ucfirst($nombre_dia_semana) ?>"> <?= $dia ?>
                                                 </th>
@@ -700,7 +686,7 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                                                 <td><?= $index + 1 ?></td>
                                                 <td><?= htmlspecialchars($alumno['legajo']) ?></td>
                                                 <td><?= htmlspecialchars($alumno['alumno_nombre']) ?></td> <?php for ($dia = 1; $dia <= $dias_en_mes_prof; $dia++):
-                                                                                                                $fecha_completa = $anio_seleccionado_profesor . '-' . str_pad($mes_seleccionado_profesor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT); // [cite: 352, 353]
+                                                                                                                $fecha_completa = $anio_seleccionado_profesor . '-' . str_pad($mes_seleccionado_profesor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT);
                                                                                                                 $estado_actual = $asistencias_cargadas_planilla_profesor[$alumno['inscripcion_cursado_id']][$fecha_completa] ?? '';
                                                                                                             ?>
                                                     <td class="day-cell">
@@ -766,8 +752,8 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                     <?php endif; ?>
                 </form>
 
-                <?php if ($mostrar_planilla_preceptor && $curso_id_seleccionado_preceptor && $materia_id_seleccionada_preceptor && $mes_seleccionado_preceptor && $anio_seleccionado_preceptor): ?> <?php if (!empty($alumnos_planilla_preceptor)): // [cite: 339]
-                                                                                                                                                                                                        $dias_en_mes_pre = cal_days_in_month(CAL_GREGORIAN, $mes_seleccionado_preceptor, $anio_seleccionado_preceptor); // [cite: 339]
+                <?php if ($mostrar_planilla_preceptor && $curso_id_seleccionado_preceptor && $materia_id_seleccionada_preceptor && $mes_seleccionado_preceptor && $anio_seleccionado_preceptor): ?> <?php if (!empty($alumnos_planilla_preceptor)): 
+                                                                                                                                                                                                        $dias_en_mes_pre = cal_days_in_month(CAL_GREGORIAN, $mes_seleccionado_preceptor, $anio_seleccionado_preceptor); 
                                                                                                                                                                                                     ?>
                         <h3 class="mt-4">Planilla Preceptor: <?= htmlspecialchars($nombre_materia_planilla_pre) ?> - <?= htmlspecialchars($nombre_curso_planilla_pre) ?> - Mes: <?= $meses_en_espanol[$mes_seleccionado_preceptor] ?> <?= $anio_seleccionado_preceptor ?></h3>
                         <form method="POST" action="asistencias.php">
@@ -779,10 +765,10 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                                         <tr>
                                             <th style="width: 40px;">N°</th>
                                             <th style="width: 80px;">Legajo</th>
-                                            <th>Alumno</th> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): // [cite: 344, 345]
-                                                                                                                                                                                                            $fecha_actual_dia = new DateTime("$anio_seleccionado_preceptor-$mes_seleccionado_preceptor-$dia"); // [cite: 345]
-                                                                                                                                                                                                            $nombre_dia_semana = strftime('%a', $fecha_actual_dia->getTimestamp()); // [cite: 346]
-                                                                                                                                                                                                            $es_finde = (in_array($nombre_dia_semana, ['Sat', 'Sun', 'Sáb', 'Dom'])); // [cite: 346]
+                                            <th>Alumno</th> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): 
+                                                                                                                                                                                                            $fecha_actual_dia = new DateTime("$anio_seleccionado_preceptor-$mes_seleccionado_preceptor-$dia"); 
+                                                                                                                                                                                                            $nombre_dia_semana = strftime('%a', $fecha_actual_dia->getTimestamp()); 
+                                                                                                                                                                                                            $es_finde = (in_array($nombre_dia_semana, ['Sat', 'Sun', 'Sáb', 'Dom'])); 
                                                             ?>
                                                 <th class="day-cell <?= $es_finde ? 'bg-light-weekend' : '' ?>" title="<?= ucfirst($nombre_dia_semana) ?>"> <?= $dia ?>
                                                 </th>
@@ -792,9 +778,9 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
                                     <tbody> <?php foreach ($alumnos_planilla_preceptor as $index => $alumno): ?> <tr>
                                                 <td><?= $index + 1 ?></td>
                                                 <td><?= htmlspecialchars($alumno['legajo']) ?></td>
-                                                <td><?= htmlspecialchars($alumno['alumno_nombre']) ?></td> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): // [cite: 352]
-                                                                                                                                                                                                                $fecha_completa = $anio_seleccionado_preceptor . '-' . str_pad($mes_seleccionado_preceptor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT); // [cite: 352, 353]
-                                                                                                                                                                                                                $estado_actual = $asistencias_cargadas_planilla_preceptor[$alumno['inscripcion_cursado_id']][$fecha_completa] ?? ''; // [cite: 353]
+                                                <td><?= htmlspecialchars($alumno['alumno_nombre']) ?></td> <?php for ($dia = 1; $dia <= $dias_en_mes_pre; $dia++): 
+                                                                                                                                                                                                                $fecha_completa = $anio_seleccionado_preceptor . '-' . str_pad($mes_seleccionado_preceptor, 2, '0', STR_PAD_LEFT) . '-' . str_pad($dia, 2, '0', STR_PAD_LEFT); 
+                                                                                                                                                                                                                $estado_actual = $asistencias_cargadas_planilla_preceptor[$alumno['inscripcion_cursado_id']][$fecha_completa] ?? ''; 
                                                                                                             ?>
                                                     <td class="day-cell"> <select name="asistencias_planilla_pre[<?= $alumno['inscripcion_cursado_id'] ?>][<?= $fecha_completa ?>]" class="form-select form-select-sm p-1">
                                                             <option value="" <?= ($estado_actual == '') ? 'selected' : '' ?>>-</option>
@@ -875,41 +861,41 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const materiaSelect = document.getElementById('materia_pdf'); // [cite: 388]
-            const profesorIdInput = document.getElementById('profesor_id_pdf'); // [cite: 388]
-            const profesorNombreDisplay = document.getElementById('profesor_nombre_display'); // [cite: 388]
-            // const cursoSelect = document.getElementById('curso_pdf'); // No se usa directamente aquí // [cite: 388]
+            const materiaSelect = document.getElementById('materia_pdf'); 
+            const profesorIdInput = document.getElementById('profesor_id_pdf'); 
+            const profesorNombreDisplay = document.getElementById('profesor_nombre_display'); 
+            // const cursoSelect = document.getElementById('curso_pdf'); // No se usa directamente aquí 
 
-            function getProfesorForMateria(materiaId) { // [cite: 388]
-                if (!materiaId) { // [cite: 388]
-                    profesorIdInput.value = ''; // [cite: 389]
-                    profesorNombreDisplay.textContent = 'Profesor/a: No seleccionado'; // [cite: 389]
-                    return; // [cite: 389]
+            function getProfesorForMateria(materiaId) { 
+                if (!materiaId) { 
+                    profesorIdInput.value = ''; 
+                    profesorNombreDisplay.textContent = 'Profesor/a: No seleccionado'; 
+                    return; 
                 }
 
-                fetch('get_profesor_materia.php?materia_id=' + materiaId) // [cite: 389, 390]
-                    .then(response => response.json()) // [cite: 390]
-                    .then(data => { // [cite: 390]
-                        if (data.profesor_id) { // [cite: 390]
-                            profesorIdInput.value = data.profesor_id; // [cite: 390]
-                            profesorNombreDisplay.textContent = 'Profesor/a: ' + data.profesor_nombre; // [cite: 391]
-                        } else { // [cite: 391]
-                            profesorIdInput.value = ''; // [cite: 391]
-                            profesorNombreDisplay.textContent = 'Profesor/a: No encontrado para esta materia'; // [cite: 392]
+                fetch('get_profesor_materia.php?materia_id=' + materiaId) 
+                    .then(response => response.json()) 
+                    .then(data => { 
+                        if (data.profesor_id) { 
+                            profesorIdInput.value = data.profesor_id; 
+                            profesorNombreDisplay.textContent = 'Profesor/a: ' + data.profesor_nombre; 
+                        } else { 
+                            profesorIdInput.value = ''; 
+                            profesorNombreDisplay.textContent = 'Profesor/a: No encontrado para esta materia'; 
                         }
                     })
-                    .catch(error => { // [cite: 392]
-                        console.error('Error al obtener el profesor:', error); // [cite: 392]
-                        profesorIdInput.value = ''; // [cite: 392]
-                        profesorNombreDisplay.textContent = 'Profesor/a: Error al cargar'; // [cite: 393]
+                    .catch(error => { 
+                        console.error('Error al obtener el profesor:', error); 
+                        profesorIdInput.value = ''; 
+                        profesorNombreDisplay.textContent = 'Profesor/a: Error al cargar'; 
                     });
             }
 
-            if (materiaSelect) { // 
-                materiaSelect.addEventListener('change', function() { //
-                    getProfesorForMateria(this.value); // 
+            if (materiaSelect) { 
+                materiaSelect.addEventListener('change', function() {
+                    getProfesorForMateria(this.value); 
                 });
-                if (materiaSelect.value) { // 
+                if (materiaSelect.value) {
                     getProfesorForMateria(materiaSelect.value);
                 }
             }
@@ -920,5 +906,5 @@ if ($curso_id_seleccionado_preceptor && $cursos_preceptor_res) {
 
 </html>
 <?php
-$mysqli->close(); // 
+$mysqli->close(); 
 ?>
