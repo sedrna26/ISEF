@@ -304,12 +304,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($_POST['accion'] === 'eliminar') { 
              $mysqli->begin_transaction();
             try {
-                // La tabla 'persona' y las tablas de roles (alumno, profesor, preceptor) deberían tener ON DELETE CASCADE 
-                // en sus FOREIGN KEYs que referencian a 'usuario' y 'persona' respectivamente,
-                // o deberías eliminarlos explícitamente aquí en el orden correcto.
-                // Asumiendo que 'persona' se borra en cascada al borrar 'usuario' si la FK está configurada así.
-                // Y las tablas de roles se borran en cascada al borrar 'persona'.
-                // Si no, deberás borrar de las tablas de roles, luego de persona, y finalmente de usuario.
                 
                 $stmt_delete = $mysqli->prepare("DELETE FROM usuario WHERE id = ?"); 
                 if(!$stmt_delete) throw new Exception("Error al preparar delete para 'usuario': ".$mysqli->error);

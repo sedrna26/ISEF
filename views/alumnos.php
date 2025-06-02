@@ -1,49 +1,72 @@
 <?php
-// alumnos_integrado.php - Gestión integrada de alumnos
+// alumnos.php - Gestión integrada de alumnos (adaptado con diseño de dashboard)
 session_start();
-if (!isset($_SESSION['usuario_id']) || $_SESSION['tipo'] !== 'administrador') {
-    header("Location: index.php");
+// 1. Verificación de sesión y tipo de usuario
+if (!isset($_SESSION['usuario_id'])) {
+    header("Location: ../index.php"); // Asumiendo que index.php está en la raíz
+    exit;
+}
+if ($_SESSION['tipo'] !== 'administrador') {
+    // Redirigir si no es administrador, quizás a dashboard con un mensaje
+    $_SESSION['mensaje_error'] = "Acceso no autorizado.";
+    header("Location: dashboard.php");
     exit;
 }
 
-$mysqli = new mysqli("localhost", "root", "", "isef_sistema");
-if ($mysqli->connect_errno) {
-    die("Fallo la conexión: " . $mysqli->connect_error);
+// 2. Incluir el archivo de conexión a la base de datos
+require_once '../config/db.php'; // Ajusta la ruta si es necesario
+
+// 3. Obtener el nombre del usuario para el sidebar
+$stmt_user = $mysqli->prepare("
+    SELECT CONCAT(p.apellidos ,' ', p.nombres) as nombre_completo 
+    FROM persona p 
+    JOIN usuario u ON p.usuario_id = u.id 
+    WHERE u.id = ?
+");
+if ($stmt_user) {
+    $stmt_user->bind_param("i", $_SESSION['usuario_id']);
+    $stmt_user->execute();
+    $result_user = $stmt_user->get_result();
+    $usuario_sidebar = $result_user->fetch_assoc();
+    $stmt_user->close();
+} else {
+    $usuario_sidebar = ['nombre_completo' => 'Admin ISEF']; // Fallback
 }
+
 
 $mensaje = '';
 $error = '';
 
 // Función para generar nombre de usuario único basado en nombre y apellido
-function generarUsername($nombre, $apellido, $mysqli) {
-    // Normalizar: eliminar acentos, espacios y caracteres especiales
+function generarUsername($nombre, $apellido, $mysqli_conn) {
     setlocale(LC_ALL, 'en_US.UTF-8');
-    $nombre = strtolower(trim($nombre));
-    $apellido = strtolower(trim($apellido));
+    $nombre_norm = strtolower(trim($nombre));
+    $apellido_norm = strtolower(trim($apellido));
     
-    // Eliminar caracteres especiales y tildes
-    $nombre = preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nombre));
-    $apellido = preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $apellido));
+    $nombre_norm = preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nombre_norm));
+    $apellido_norm = preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $apellido_norm));
     
-    // Crear username base: primera letra del nombre + apellido
-    $baseUsername = substr($nombre, 0, 1) . $apellido;
+    $baseUsername = substr($nombre_norm, 0, 1) . $apellido_norm;
+    if (empty($baseUsername)) { // En caso de nombres/apellidos muy cortos o con solo caracteres especiales
+        $baseUsername = 'user';
+    }
     $username = $baseUsername;
-    
-    // Verificar si ya existe
     $i = 1;
     while (true) {
-        $stmt = $mysqli->prepare("SELECT id FROM usuario WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $stmt->close();
+        $stmt_check = $mysqli_conn->prepare("SELECT id FROM usuario WHERE username = ?");
+        if (!$stmt_check) { // Manejo de error en preparación de consulta
+            error_log("Error al preparar la consulta de verificación de username: " . $mysqli_conn->error);
+            // Fallback: generar un username aleatorio para evitar bucle infinito
+            return "user" . uniqid(); 
+        }
+        $stmt_check->bind_param("s", $username);
+        $stmt_check->execute();
+        $result_check = $stmt_check->get_result();
+        $stmt_check->close();
         
-        if ($result->num_rows === 0) {
-            // Username disponible
+        if ($result_check->num_rows === 0) {
             return $username;
         }
-        
-        // Incrementar contador y probar de nuevo
         $username = $baseUsername . $i;
         $i++;
     }
@@ -51,108 +74,125 @@ function generarUsername($nombre, $apellido, $mysqli) {
 
 // Procesar formulario de creación o edición de alumno
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($_POST['accion'] === 'crear') {
+    $accion = $_POST['accion'] ?? ''; // Usar operador de coalescencia nula
+
+    if ($accion === 'crear') {
         $mysqli->begin_transaction();
         try {
-            // Generar nombre de usuario único
             $username = generarUsername($_POST['nombres'], $_POST['apellidos'], $mysqli);
-            
-            // 1. Crear usuario con contraseña por defecto (DNI)
             $password_hash = password_hash($_POST['dni'], PASSWORD_DEFAULT);
             $tipo = 'alumno';
-            $activo = 1;
+            $activo = 1; // Por defecto activo
             
-            $stmt = $mysqli->prepare("INSERT INTO usuario (username, password, tipo, activo) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("sssi", $username, $password_hash, $tipo, $activo);
-            $stmt->execute();
-            $usuario_id = $mysqli->insert_id;
-            $stmt->close();
-            
-            // 2. Crear registro de persona
-            $stmt = $mysqli->prepare("INSERT INTO persona (usuario_id, apellidos, nombres, dni, fecha_nacimiento, celular, domicilio, contacto_emergencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("isssssss", $usuario_id, $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia']);
-            $stmt->execute();
-            $persona_id = $mysqli->insert_id;
-            $stmt->close();
-            
-            // 3. Crear registro de alumno
-            $stmt = $mysqli->prepare("INSERT INTO alumno (persona_id, legajo, fecha_ingreso, cohorte) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("issi", $persona_id, $_POST['legajo'], $_POST['fecha_ingreso'], $_POST['cohorte']);
-            $stmt->execute();
-            $stmt->close();
+            $stmt_u = $mysqli->prepare("INSERT INTO usuario (username, password, tipo, activo, debe_cambiar_password) VALUES (?, ?, ?, ?, 0)"); // debe_cambiar_password = 0 (false) por defecto
+            $stmt_u->bind_param("sssi", $username, $password_hash, $tipo, $activo);
+            $stmt_u->execute();
+            $usuario_id_new = $mysqli->insert_id;
+            $stmt_u->close();
+
+            $stmt_p = $mysqli->prepare("INSERT INTO persona (usuario_id, apellidos, nombres, dni, fecha_nacimiento, celular, domicilio, contacto_emergencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_p->bind_param("isssssss", $usuario_id_new, $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia']);
+            $stmt_p->execute();
+            $persona_id_new = $mysqli->insert_id;
+            $stmt_p->close();
+
+            $stmt_a = $mysqli->prepare("INSERT INTO alumno (persona_id, legajo, fecha_ingreso, cohorte) VALUES (?, ?, ?, ?)");
+            $stmt_a->bind_param("issi", $persona_id_new, $_POST['legajo'], $_POST['fecha_ingreso'], $_POST['cohorte']);
+            $stmt_a->execute();
+            $stmt_a->close();
             
             $mysqli->commit();
-            $mensaje = "Alumno creado correctamente. Nombre de usuario: $username";
-            
+            $_SESSION['mensaje_exito'] = "Alumno creado correctamente. Nombre de usuario: $username";
         } catch (Exception $e) {
             $mysqli->rollback();
-            $error = "Error al crear el alumno: " . $e->getMessage();
+            $_SESSION['mensaje_error'] = "Error al crear el alumno: " . $e->getMessage();
         }
-    } elseif ($_POST['accion'] === 'editar') {
+    } elseif ($accion === 'editar') {
         $mysqli->begin_transaction();
         try {
-            // 1. Actualizar datos de persona
-            $stmt = $mysqli->prepare("UPDATE persona SET apellidos = ?, nombres = ?, dni = ?, fecha_nacimiento = ?, celular = ?, domicilio = ?, contacto_emergencia = ? WHERE id = ?");
-            $stmt->bind_param("sssssssi", $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia'], $_POST['persona_id']);
-            $stmt->execute();
-            $stmt->close();
-            
-            // 2. Actualizar datos de alumno
-            $stmt = $mysqli->prepare("UPDATE alumno SET legajo = ?, fecha_ingreso = ?, cohorte = ? WHERE persona_id = ?");
-            $stmt->bind_param("ssii", $_POST['legajo'], $_POST['fecha_ingreso'], $_POST['cohorte'], $_POST['persona_id']);
-            $stmt->execute();
-            $stmt->close();
+            $stmt_p_upd = $mysqli->prepare("UPDATE persona SET apellidos = ?, nombres = ?, dni = ?, fecha_nacimiento = ?, celular = ?, domicilio = ?, contacto_emergencia = ? WHERE id = ?");
+            $stmt_p_upd->bind_param("sssssssi", $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia'], $_POST['persona_id']);
+            $stmt_p_upd->execute();
+            $stmt_p_upd->close();
+
+            $stmt_a_upd = $mysqli->prepare("UPDATE alumno SET legajo = ?, fecha_ingreso = ?, cohorte = ? WHERE persona_id = ?");
+            $stmt_a_upd->bind_param("ssii", $_POST['legajo'], $_POST['fecha_ingreso'], $_POST['cohorte'], $_POST['persona_id']);
+            $stmt_a_upd->execute();
+            $stmt_a_upd->close();
+
+            // Opcional: Actualizar estado activo/inactivo del usuario
+            if (isset($_POST['activo'])) {
+                 $activo_user = $_POST['activo'] == '1' ? 1 : 0;
+                 $stmt_user_act = $mysqli->prepare("UPDATE usuario SET activo = ? WHERE id = (SELECT usuario_id FROM persona WHERE id = ?)");
+                 $stmt_user_act->bind_param("ii", $activo_user, $_POST['persona_id']);
+                 $stmt_user_act->execute();
+                 $stmt_user_act->close();
+            }
             
             $mysqli->commit();
-            $mensaje = "Alumno actualizado correctamente.";
-            
+            $_SESSION['mensaje_exito'] = "Alumno actualizado correctamente.";
         } catch (Exception $e) {
             $mysqli->rollback();
-            $error = "Error al actualizar el alumno: " . $e->getMessage();
+            $_SESSION['mensaje_error'] = "Error al actualizar el alumno: " . $e->getMessage();
         }
-    } elseif ($_POST['accion'] === 'eliminar') {
+    } elseif ($accion === 'eliminar') {
         $mysqli->begin_transaction();
         try {
-            // Obtener el usuario_id antes de eliminar
-            $stmt = $mysqli->prepare("SELECT usuario_id FROM persona WHERE id = ?");
-            $stmt->bind_param("i", $_POST['persona_id']);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $row = $result->fetch_assoc();
-            $usuario_id = $row['usuario_id'];
-            $stmt->close();
-            
-            // La eliminación en cascada manejará las relaciones,
-            // pero debemos eliminar primero el usuario manualmente
-            $stmt = $mysqli->prepare("DELETE FROM usuario WHERE id = ?");
-            $stmt->bind_param("i", $usuario_id);
-            $stmt->execute();
-            $stmt->close();
+            $stmt_get_uid = $mysqli->prepare("SELECT usuario_id FROM persona WHERE id = ?");
+            $stmt_get_uid->bind_param("i", $_POST['persona_id_eliminar']);
+            $stmt_get_uid->execute();
+            $result_uid = $stmt_get_uid->get_result();
+            $row_uid = $result_uid->fetch_assoc();
+            $usuario_id_del = $row_uid['usuario_id'] ?? null;
+            $stmt_get_uid->close();
+
+            if ($usuario_id_del) {
+                // Primero eliminar de alumno, luego persona, luego usuario (o configurar ON DELETE CASCADE en la BD)
+                // Asumiendo que ON DELETE CASCADE está configurado para alumno -> persona y persona -> usuario (en usuario_id)
+                // O eliminamos explícitamente si no hay CASCADE o queremos ser específicos.
+                // Si no hay cascade desde persona a alumno, primero alumno:
+                $stmt_del_a = $mysqli->prepare("DELETE FROM alumno WHERE persona_id = ?");
+                $stmt_del_a->bind_param("i", $_POST['persona_id_eliminar']);
+                $stmt_del_a->execute();
+                $stmt_del_a->close();
+
+                $stmt_del_p = $mysqli->prepare("DELETE FROM persona WHERE id = ?");
+                $stmt_del_p->bind_param("i", $_POST['persona_id_eliminar']);
+                $stmt_del_p->execute();
+                $stmt_del_p->close();
+                
+                $stmt_del_u = $mysqli->prepare("DELETE FROM usuario WHERE id = ?");
+                $stmt_del_u->bind_param("i", $usuario_id_del);
+                $stmt_del_u->execute();
+                $stmt_del_u->close();
+            } else {
+                 throw new Exception("No se encontró el usuario asociado a la persona.");
+            }
             
             $mysqli->commit();
-            $mensaje = "Alumno eliminado correctamente.";
-            
+            $_SESSION['mensaje_exito'] = "Alumno eliminado correctamente.";
         } catch (Exception $e) {
             $mysqli->rollback();
-            $error = "Error al eliminar el alumno: " . $e->getMessage();
+            $_SESSION['mensaje_error'] = "Error al eliminar el alumno: " . $e->getMessage();
         }
     }
     
-    // Redireccionar para evitar reenvío del formulario
-    header("Location: alumnos_integrado.php?mensaje=" . urlencode($mensaje) . "&error=" . urlencode($error));
+    header("Location: alumnos.php");
     exit;
 }
 
-// Recuperar mensaje y error si existen
-if (isset($_GET['mensaje']) && !empty($_GET['mensaje'])) {
-    $mensaje = $_GET['mensaje'];
+// Recuperar mensajes de la sesión
+if (isset($_SESSION['mensaje_exito'])) {
+    $mensaje = $_SESSION['mensaje_exito'];
+    unset($_SESSION['mensaje_exito']);
 }
-if (isset($_GET['error']) && !empty($_GET['error'])) {
-    $error = $_GET['error'];
+if (isset($_SESSION['mensaje_error'])) {
+    $error = $_SESSION['mensaje_error'];
+    unset($_SESSION['mensaje_error']);
 }
 
 // Obtener lista de alumnos
-$alumnos = $mysqli->query("
+$query_alumnos = "
     SELECT 
         p.id AS persona_id,
         a.id AS alumno_id,
@@ -176,229 +216,604 @@ $alumnos = $mysqli->query("
         usuario u ON p.usuario_id = u.id
     ORDER BY 
         p.apellidos, p.nombres
-");
-?>
+";
+$resultado_alumnos = $mysqli->query($query_alumnos);
+$lista_alumnos = [];
+if ($resultado_alumnos) {
+    while ($fila = $resultado_alumnos->fetch_assoc()) {
+        $lista_alumnos[] = $fila;
+    }
+}
 
+// Para los selectores de filtros (si se implementan más adelante)
+// $cursos_existentes = array_unique(array_column($lista_alumnos, 'cohorte')); // Ejemplo
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestión de Alumnos - ISEF</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Alumnos - Sistema ISEF</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .message { padding: 10px; margin: 10px 0; border-radius: 5px; }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        form { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="date"], input[type="number"], textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { padding: 10px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button.edit { background-color: #2196F3; }
-        button.delete { background-color: #f44336; }
-        .form-row { display: flex; gap: 20px; }
-        .form-col { flex: 1; }
-        .actions { display: flex; gap: 5px; }
+        /* Estilos base y de dashboard.php */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; color: #334155; line-height: 1.6; }
+        .app-container { display: flex; min-height: 100vh; }
+
+        /* Sidebar Styles (de dashboard.php) */
+        .sidebar { width: 280px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; }
+        .sidebar-brand { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; color: inherit; }
+        .brand-icon { width: 32px; height: 32px; background: #3b82f6; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .brand-text h1 { font-size: 1rem; font-weight: 600; margin: 0; }
+        .brand-text p { font-size: 0.75rem; color: #64748b; margin: 0; }
+        .sidebar-nav { flex: 1; padding: 1rem; }
+        .nav-section { margin-bottom: 2rem; }
+        .nav-label { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; padding: 0 0.75rem; }
+        .nav-menu { list-style: none; }
+        .nav-item { margin-bottom: 0.25rem; }
+        .nav-link { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; color: #64748b; text-decoration: none; border-radius: 6px; transition: all 0.2s; font-size: 0.875rem; }
+        .nav-link:hover { background: #f1f5f9; color: #334155; }
+        .nav-link.active { background: #dbeafe; color: #1d4ed8; font-weight: 500; } /* Estilo activo mejorado */
+        .nav-icon { width: 16px; height: 16px; }
+        .sidebar-footer { padding: 1rem; border-top: 1px solid #e2e8f0; margin-top: auto; /* Empuja al final */ }
+        .user-info { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #f8fafc; border-radius: 6px; margin-bottom: 0.5rem; }
+        .user-avatar { width: 32px; height: 32px; background: #3b82f6; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.875rem; }
+        .user-details h3 { font-size: 0.875rem; font-weight: 500; margin: 0; }
+        .user-details p { font-size: 0.75rem; color: #64748b; margin: 0; }
+        .logout-btn { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; color: #dc2626; text-decoration: none; border-radius: 6px; transition: all 0.2s; font-size: 0.875rem; border: none; background: none; width: 100%; cursor: pointer; text-align: left; }
+        .logout-btn:hover { background: #fee2e2; }
+
+        /* Main Content & Header (de dashboard.php) */
+        .main-content { flex: 1; display: flex; flex-direction: column; }
+        .header { background: white; border-bottom: 1px solid #e2e8f0; padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; z-index: 900; }
+        .sidebar-toggle { display: none; background: none; border: none; padding: 0.5rem; cursor: pointer; border-radius: 4px; }
+        .sidebar-toggle:hover { background: #f1f5f9; }
+        .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: #64748b; }
+        .breadcrumb a { color: inherit; text-decoration: none; }
+        .breadcrumb a:hover { color: #334155; }
+        .header-actions { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+        .header-actions .icon-btn { background: none; border: 1px solid #e2e8f0; padding: 0.5rem; border-radius: 6px; cursor: pointer; display:flex; align-items:center; justify-content:center; }
+        .header-actions .icon-btn i { width: 16px; height: 16px; color: #64748b; }
+        .header-actions .icon-btn:hover { background: #f1f5f9; }
+
+
+        .content { flex: 1; padding: 1.5rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .page-header { margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-size: 1.75rem; font-weight: 600; /* Reducido de 2rem */ }
+        .page-subtitle { color: #64748b; font-size: 0.9rem; margin-top: 0.25rem; }
+
+     
+        .message-toast { padding: 1rem; margin-bottom: 1.5rem; border-radius: 6px; border: 1px solid transparent; }
+        .message-toast.success { background-color: #dcfce7; color: #166534; border-color: #bbf7d0; }
+        .message-toast.error { background-color: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 1.5rem; }
+        .card-header { padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0; }
+        .card-title { font-size: 1.125rem; font-weight: 600; }
+        .card-description { font-size: 0.875rem; color: #64748b; margin-top:0.25rem; }
+        .card-content { padding: 1.5rem; }
+        .card-footer { padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; background-color: #f8fafc; text-align: right;}
+
+      
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; color: #334155; }
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group input[type="number"],
+        .form-group input[type="email"], /* Para futuro */
+        .form-group select,
+        .form-group textarea {
+            width: 100%; padding: 0.625rem 0.75rem; /* Ajuste de padding */
+            border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;
+            font-size: 0.875rem; color: #334155;
+            background-color: white;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: #3b82f6; outline: none; box-shadow: 0 0 0 1px #3b82f6;
+        }
+        .form-group textarea { min-height: 80px; }
+
+
+        /* Estilos para Botones (simulando page.tsx) */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 0.625rem 1rem; /* Ajuste de padding */
+            font-size: 0.875rem; font-weight: 500;
+            border-radius: 6px; border: 1px solid transparent;
+            cursor: pointer; transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+            text-decoration: none; white-space: nowrap;
+        }
+        .btn i { margin-right: 0.5rem; width:16px; height:16px; }
+        .btn.btn-primary { background-color: #2563eb; color: white; border-color: #2563eb; }
+        .btn.btn-primary:hover { background-color: #1d4ed8; border-color: #1d4ed8; }
+        
+        .btn.btn-secondary { background-color: #e2e8f0; color: #334155; border-color: #e2e8f0; }
+        .btn.btn-secondary:hover { background-color: #cbd5e1; border-color: #cbd5e1; }
+
+        .btn.btn-danger { background-color: #dc2626; color: white; border-color: #dc2626; }
+        .btn.btn-danger:hover { background-color: #b91c1c; border-color: #b91c1c; }
+
+        .btn.btn-outline { background-color: transparent; color: #475569; border: 1px solid #cbd5e1; }
+        .btn.btn-outline:hover { background-color: #f8fafc; border-color: #94a3b8; }
+        .btn.btn-outline.btn-danger-outline { color: #dc2626; border-color: #fecaca; }
+        .btn.btn-outline.btn-danger-outline:hover { background-color: #fee2e2; color: #b91c1c; border-color: #fca5a5;}
+
+        .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
+        .btn-sm i { margin-right: 0.25rem; width:14px; height:14px;}
+
+
+        /* Estilos para Tablas (simulando page.tsx) */
+        .table-container { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white; }
+        table.styled-table { width: 100%; border-collapse: collapse; }
+        table.styled-table th, table.styled-table td {
+            padding: 0.75rem 1rem; text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.875rem;
+        }
+        table.styled-table th { background-color: #f8fafc; color: #475569; font-weight: 600; }
+        table.styled-table tr:last-child td { border-bottom: none; }
+        table.styled-table tr:hover { background-color: #f1f5f9; }
+        .table-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+        /* Badges de Estado (simulando page.tsx) */
+        .badge {
+            display: inline-flex; align-items: center;
+            padding: 0.25em 0.6em; font-size: 0.75rem; font-weight: 500;
+            border-radius: 9999px; /* pill shape */
+        }
+        .badge i { width: 12px; height: 12px; margin-right: 0.25rem; }
+        .badge-success { background-color: #dcfce7; color: #15803d; } /* Verde más oscuro para texto */
+        .badge-danger { background-color: #fee2e2; color: #b91c1c; } /* Rojo más oscuro para texto */
+
+
+        
+
+        .modal-content {
+            background: white; padding: 0; /* El padding lo maneja card */
+            border-radius: 8px;
+            width: 100%; max-width: 700px; /* Ancho del modal */
+            max-height: 90vh; overflow-y: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: -280px; transition: left 0.3s; z-index: 1000; }
+            .sidebar.open { left: 0; }
+            .sidebar-toggle { display: block; }
+            .content { padding: 1rem; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .page-header .btn { margin-top:0.5rem; width:100%;}
+            .form-grid { grid-template-columns: 1fr; } /* Stack form elements */
+            .header-actions { display: none; /* Ocultar acciones de header en móvil, o adaptar */ }
+            .modal-content { max-width: calc(100% - 2rem); }
+        }
+
+        .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 999; }
+        .overlay.show { display: block; }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Gestión de Alumnos</h1>
-        <a href="dashboard.php">&laquo; Volver al menú</a>
-        
-        <?php if ($mensaje): ?>
-            <div class="message success"><?= htmlspecialchars($mensaje) ?></div>
-        <?php endif; ?>
-        
-        <?php if ($error): ?>
-            <div class="message error"><?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
-        
-        <h2>Nuevo Alumno</h2>
-        <form method="post">
-            <input type="hidden" name="accion" value="crear">
-            
-            <div class="form-row">
-                <div class="form-col">
-                    <div class="form-group">
-                        <label for="apellidos">Apellidos:</label>
-                        <input type="text" id="apellidos" name="apellidos" required>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="dashboard.php" class="sidebar-brand">
+                    <div class="brand-icon"><i data-lucide="school"></i></div>
+                    <div class="brand-text">
+                        <h1>Sistema de Gestión ISEF</h1>
+                        <p>Instituto Superior</p>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="nombres">Nombres:</label>
-                        <input type="text" id="nombres" name="nombres" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="dni">DNI:</label>
-                        <input type="text" id="dni" name="dni" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="fecha_nacimiento">Fecha de nacimiento:</label>
-                        <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
-                    </div>
-                </div>
-                
-                <div class="form-col">
-                    <div class="form-group">
-                        <label for="celular">Celular:</label>
-                        <input type="text" id="celular" name="celular">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="domicilio">Domicilio:</label>
-                        <input type="text" id="domicilio" name="domicilio">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="contacto_emergencia">Contacto de emergencia:</label>
-                        <input type="text" id="contacto_emergencia" name="contacto_emergencia">
-                    </div>
-                </div>
-                
-                <div class="form-col">
-                    <div class="form-group">
-                        <label for="legajo">Legajo:</label>
-                        <input type="text" id="legajo" name="legajo" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="fecha_ingreso">Fecha de ingreso:</label>
-                        <input type="date" id="fecha_ingreso" name="fecha_ingreso" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="cohorte">Cohorte:</label>
-                        <input type="number" id="cohorte" name="cohorte" required>
-                    </div>
-                </div>
+                </a>
             </div>
-            
-            <button type="submit">Crear Alumno</button>
-        </form>
-        
-        <h2>Lista de Alumnos</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>DNI</th>
-                    <th>Legajo</th>
-                    <th>Cohorte</th>
-                    <th>Usuario</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while ($alu = $alumnos->fetch_assoc()): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($alu['apellidos']) ?>, <?= htmlspecialchars($alu['nombres']) ?></td>
-                        <td><?= htmlspecialchars($alu['dni']) ?></td>
-                        <td><?= htmlspecialchars($alu['legajo']) ?></td>
-                        <td><?= htmlspecialchars($alu['cohorte']) ?></td>
-                        <td><?= htmlspecialchars($alu['username']) ?></td>
-                        <td><?= $alu['activo'] ? 'Activo' : 'Inactivo' ?></td>
-                        <td class="actions">
-                            <button class="edit" onclick="cargarDatosEdicion(<?= htmlspecialchars(json_encode($alu)) ?>)">
-                                Editar
-                            </button>
-                            <form method="post" style="display:inline;" onsubmit="return confirm('¿Está seguro de eliminar este alumno?');">
-                                <input type="hidden" name="accion" value="eliminar">
-                                <input type="hidden" name="persona_id" value="<?= $alu['persona_id'] ?>">
-                                <button type="submit" class="delete">Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
-        
-        <!-- Modal de edición (aparece oculto) -->
-        <div id="edicionForm" style="display:none;">
-            <h2>Editar Alumno</h2>
-            <form method="post" id="form-editar">
-                <input type="hidden" name="accion" value="editar">
-                <input type="hidden" name="persona_id" id="edit-persona-id">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-label">Navegación Principal</div>
+                    <ul class="nav-menu">
+                        <li class="nav-item"><a href="dashboard.php" class="nav-link"><i data-lucide="home" class="nav-icon"></i><span>Inicio</span></a></li>
+                        <?php if ($_SESSION['tipo'] === 'administrador'): ?>
+                            <li class="nav-item"><a href="alumnos.php" class="nav-link"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
+                            <li class="nav-item"><a href="profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
+                            <li class="nav-item"><a href="usuarios.php" class="nav-link"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
+                            <li class="nav-item"><a href="materias.php" class="nav-link"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
+                            <li class="nav-item"><a href="cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
+                            <li class="nav-item"><a href="auditoria.php" class="nav-link"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
+                        <?php endif; ?>
+                         <?php if ($_SESSION['tipo'] === 'profesor' || $_SESSION['tipo'] === 'preceptor'): ?>
+                        <li class="nav-item">
+                            <a href="asistencias.php" class="nav-link">
+                                <i data-lucide="user-check" class="nav-icon"></i>
+                                <span>Asistencias</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="evaluaciones.php" class="nav-link">
+                                <i data-lucide="clipboard-check" class="nav-icon"></i>
+                                <span>Evaluaciones</span>
+                            </a>
+                        </li>
+                        <?php endif; ?>
+                        <?php if ($_SESSION['tipo'] === 'alumno'): ?>
+                        <li class="nav-item">
+                            <a href="inscripciones.php" class="nav-link">
+                                <i data-lucide="user-plus" class="nav-icon"></i>
+                                <span>Inscripciones</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="situacion.php" class="nav-link">
+                                <i data-lucide="bar-chart-3" class="nav-icon"></i>
+                                <span>Situación Académica</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="certificados.php" class="nav-link">
+                                <i data-lucide="file-text" class="nav-icon"></i>
+                                <span>Certificados</span>
+                            </a>
+                        </li>
+                        <?php endif; ?>
+                    </ul>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar"><?= strtoupper(substr($usuario_sidebar['nombre_completo'] ?? 'A', 0, 1)) ?></div>
+                    <div class="user-details">
+                        <h3><?= htmlspecialchars($usuario_sidebar['nombre_completo'] ?? 'Admin Usuario') ?></h3>
+                        <p><?= htmlspecialchars($_SESSION['tipo']) ?>@isef.edu</p>
+                    </div>
+                </div>
+                <button onclick="confirmLogout()" class="logout-btn">
+                    <i data-lucide="log-out" class="nav-icon"></i>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </aside>
+        <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <header class="header">
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i data-lucide="menu"></i>
+                </button>
+                <nav class="breadcrumb">
+                    <a href="dashboard.php">Sistema de Gestión ISEF</a>
+                    <span>/</span>
+                    <span>Alumnos</span>
+                </nav>
+                <div class="header-actions">
+                    <button class="icon-btn" title="Notificaciones">
+                        <i data-lucide="bell"></i>
+                    </button>
+                    </div>
+            </header>
+
+            <div class="content">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Gestión de Alumnos</h1>
+                        <p class="page-subtitle">Administra la información de los estudiantes del instituto.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="mostrarFormCreacion()">
+                        <i data-lucide="plus"></i>
+                        Nuevo Alumno
+                    </button>
+                </div>
+
+                <?php if ($mensaje): ?>
+                    <div class="message-toast success" role="alert"><?= htmlspecialchars($mensaje) ?></div>
+                <?php endif; ?>
+                <?php if ($error): ?>
+                    <div class="message-toast error" role="alert"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
+
+                <div class="card" id="creacionFormCard" style="display:none;"> <div class="card-header">
+                        <h2 class="card-title">Registrar Nuevo Alumno</h2>
+                        <p class="card-description">Completa los datos para agregar un nuevo estudiante.</p>
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="accion" value="crear">
+                        <div class="card-content">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="apellidos">Apellidos:</label>
+                                    <input type="text" id="apellidos" name="apellidos" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="nombres">Nombres:</label>
+                                    <input type="text" id="nombres" name="nombres" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="dni">DNI:</label>
+                                    <input type="text" id="dni" name="dni" required pattern="\d{7,8}" title="DNI debe ser 7 u 8 dígitos numéricos.">
+                                </div>
+                                <div class="form-group">
+                                    <label for="fecha_nacimiento">Fecha de nacimiento:</label>
+                                    <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="celular">Celular:</label>
+                                    <input type="text" id="celular" name="celular">
+                                </div>
+                                <div class="form-group">
+                                    <label for="domicilio">Domicilio:</label>
+                                    <input type="text" id="domicilio" name="domicilio">
+                                </div>
+                                <div class="form-group">
+                                    <label for="contacto_emergencia">Contacto de emergencia (Teléfono):</label>
+                                    <input type="text" id="contacto_emergencia" name="contacto_emergencia">
+                                </div>
+                                <div class="form-group">
+                                    <label for="legajo">Legajo:</label>
+                                    <input type="text" id="legajo" name="legajo" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="fecha_ingreso">Fecha de ingreso:</label>
+                                    <input type="date" id="fecha_ingreso" name="fecha_ingreso" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cohorte">Cohorte (Año):</label>
+                                    <input type="number" id="cohorte" name="cohorte" required min="1900" max="<?= date('Y')+1 ?>">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="button" class="btn btn-secondary" onclick="ocultarFormCreacion()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" style="margin-left:0.5rem;"><i data-lucide="save"></i>Crear Alumno</button>
+                        </div>
+                    </form>
+                </div>
                 
-                <div class="form-row">
-                    <div class="form-col">
+
+               <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Lista de Alumnos Registrados</h2>
+                        <p class="card-description">Visualiza y gestiona los alumnos existentes.</p>
+                    </div>
+                    <div class="card-content" style="padding-top: 1rem; padding-bottom: 0;">
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <input type="search" id="searchInput" class="form-control" onkeyup="filterTable()" placeholder="Buscar por Legajo, Nombre, Apellido o DNI..." style="width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.875rem;">
+                        </div>
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Legajo</th>
+                                        <th>Nombre Completo</th>
+                                        <th>DNI</th>
+                                        <th>Cohorte</th>
+                                        <th>Usuario</th>
+                                        <th>Estado</th>
+                                        <th class="text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($lista_alumnos)): ?>
+                                        <tr id="noAlumnosRow">
+                                            <td colspan="7" style="text-align:center; padding: 2rem;">No hay alumnos registrados.</td> 
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($lista_alumnos as $alu): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($alu['legajo']) ?></td>
+                                            <td><?= htmlspecialchars($alu['apellidos']) ?>, <?= htmlspecialchars($alu['nombres']) ?></td>
+                                            <td><?= htmlspecialchars($alu['dni']) ?></td>
+                                            <td><?= htmlspecialchars($alu['cohorte']) ?></td> 
+                                            <td><?= htmlspecialchars($alu['username']) ?></td> 
+                                            <td>
+                                                <?php if ($alu['activo']): ?> 
+                                                    <span class="badge badge-success"><i data-lucide="user-check"></i>Activo</span> 
+                                                <?php else: ?>
+                                                    <span class="badge badge-danger"><i data-lucide="user-x"></i>Inactivo</span> 
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="table-actions">
+                                                <button class="btn btn-outline btn-sm" onclick='cargarDatosEdicion(<?= htmlspecialchars(json_encode($alu), ENT_QUOTES, 'UTF-8') ?>)' title="Editar Alumno"> 
+                                                    <i data-lucide="edit-2"></i>
+                                                </button>
+                                                <form method="post" style="display:inline;" onsubmit="return confirm('¿Está seguro de eliminar este alumno?\nEsta acción no se puede deshacer.');">
+                                                    <input type="hidden" name="accion" value="eliminar">
+                                                    <input type="hidden" name="persona_id_eliminar" value="<?= $alu['persona_id'] ?>"> 
+                                                    <button type="submit" class="btn btn-outline btn-danger-outline btn-sm" title="Eliminar Alumno">
+                                                        <i data-lucide="trash-2"></i> 
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                    
+                                    <tr id="noResultsSearchRow" style="display: none;">
+                                        <td colspan="7" style="text-align:center; padding: 2rem;">No se encontraron alumnos que coincidan con la búsqueda.</td>
+                                    </tr>
+                            
+                                </tbody>
+                            </table>
+                        </div>
+                    </div> 
+                </div>
+           <div id="edicionFormContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+        <div class="modal-content card"> <div class="card-header">
+                <h2 class="card-title">Editar Alumno</h2>
+                <p class="card-description">Modifica la información del estudiante seleccionado.</p>
+            </div>
+            <form method="post" id="form-editar">
+                 <input type="hidden" name="accion" value="editar">
+                 <input type="hidden" name="persona_id" id="edit-persona-id">
+                <div class="card-content">
+                    <div class="form-grid">
                         <div class="form-group">
                             <label for="edit-apellidos">Apellidos:</label>
                             <input type="text" id="edit-apellidos" name="apellidos" required>
                         </div>
-                        
                         <div class="form-group">
                             <label for="edit-nombres">Nombres:</label>
                             <input type="text" id="edit-nombres" name="nombres" required>
                         </div>
-                        
                         <div class="form-group">
                             <label for="edit-dni">DNI:</label>
-                            <input type="text" id="edit-dni" name="dni" required>
+                            <input type="text" id="edit-dni" name="dni" required pattern="\d{7,8}" title="DNI debe ser 7 u 8 dígitos numéricos.">
                         </div>
-                        
                         <div class="form-group">
                             <label for="edit-fecha-nacimiento">Fecha de nacimiento:</label>
                             <input type="date" id="edit-fecha-nacimiento" name="fecha_nacimiento" required>
                         </div>
-                    </div>
-                    
-                    <div class="form-col">
                         <div class="form-group">
                             <label for="edit-celular">Celular:</label>
                             <input type="text" id="edit-celular" name="celular">
                         </div>
-                        
                         <div class="form-group">
                             <label for="edit-domicilio">Domicilio:</label>
                             <input type="text" id="edit-domicilio" name="domicilio">
                         </div>
-                        
                         <div class="form-group">
-                            <label for="edit-contacto-emergencia">Contacto de emergencia:</label>
+                            <label for="edit-contacto-emergencia">Contacto de emergencia (Teléfono):</label>
                             <input type="text" id="edit-contacto-emergencia" name="contacto_emergencia">
                         </div>
-                    </div>
-                    
-                    <div class="form-col">
                         <div class="form-group">
                             <label for="edit-legajo">Legajo:</label>
                             <input type="text" id="edit-legajo" name="legajo" required>
                         </div>
-                        
                         <div class="form-group">
                             <label for="edit-fecha-ingreso">Fecha de ingreso:</label>
                             <input type="date" id="edit-fecha-ingreso" name="fecha_ingreso" required>
                         </div>
-                        
                         <div class="form-group">
-                            <label for="edit-cohorte">Cohorte:</label>
-                            <input type="number" id="edit-cohorte" name="cohorte" required>
+                            <label for="edit-cohorte">Cohorte (Año):</label>
+                            <input type="number" id="edit-cohorte" name="cohorte" required min="1900" max="<?= date('Y')+1 ?>">
+                        </div>
+                         <div class="form-group">
+                            <label for="edit-activo">Estado del Usuario:</label>
+                            <select id="edit-activo" name="activo">
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
+                            </select>
                         </div>
                     </div>
                 </div>
-                
-                <button type="submit">Guardar Cambios</button>
-                <button type="button" onclick="ocultarFormEdicion()">Cancelar</button>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-secondary" onclick="ocultarFormEdicion()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="margin-left:0.5rem;"><i data-lucide="save"></i>Guardar Cambios</button>
+                </div>
             </form>
         </div>
     </div>
-    
+
     <script>
+        lucide.createIcons();
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        }
+        
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeSidebar();
+            }
+        });
+
+        function confirmLogout() {
+            if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+                window.location.href = '../index.php?logout=1'; // Ajusta la ruta si es necesario
+            }
+        }
+        function filterTable() {
+            const input = document.getElementById("searchInput");
+            const filter = input.value.toLowerCase();
+            const table = document.querySelector(".styled-table");
+            const tbody = table.getElementsByTagName("tbody")[0];
+            const tr = tbody.getElementsByTagName("tr");
+            let foundMatch = false;
+
+            const noAlumnosRow = document.getElementById('noAlumnosRow');
+            const noResultsSearchRow = document.getElementById('noResultsSearchRow');
+
+            // Hide specific message rows initially during filtering
+            if (noAlumnosRow) noAlumnosRow.style.display = 'none';
+            if (noResultsSearchRow) noResultsSearchRow.style.display = 'none';
+
+            for (let i = 0; i < tr.length; i++) {
+                let row = tr[i];
+
+                // Skip the predefined message rows from the filtering logic itself
+                if (row.id === 'noAlumnosRow' || row.id === 'noResultsSearchRow') {
+                    continue;
+                }
+
+                let displayRow = false;
+                // Ensure cells exist before trying to access textContent
+                const legajoTd = row.cells[0];
+                const nombreCompletoTd = row.cells[1];
+                const dniTd = row.cells[2];
+                // You can also add other cells like cohorte (row.cells[3]) or username (row.cells[4]) if needed
+
+                if (legajoTd && nombreCompletoTd && dniTd) {
+                    const legajoText = legajoTd.textContent || legajoTd.innerText;
+                    const nombreCompletoText = nombreCompletoTd.textContent || nombreCompletoTd.innerText;
+                    const dniText = dniTd.textContent || dniTd.innerText;
+
+                    if (legajoText.toLowerCase().indexOf(filter) > -1 ||
+                        nombreCompletoText.toLowerCase().indexOf(filter) > -1 ||
+                        dniText.toLowerCase().indexOf(filter) > -1) {
+                        displayRow = true;
+                        foundMatch = true;
+                    }
+                }
+                row.style.display = displayRow ? "" : "none";
+            }
+
+            // Logic to display the correct "no results" message
+            const isListaAlumnosEmpty = <?php echo empty($lista_alumnos) ? 'true' : 'false'; ?>;
+
+            if (filter === "") { // Search is cleared
+                if (isListaAlumnosEmpty && noAlumnosRow) {
+                    noAlumnosRow.style.display = ''; // Show "No hay alumnos registrados"
+                }
+                if (noResultsSearchRow) {
+                     noResultsSearchRow.style.display = 'none'; // Hide "No se encontraron..."
+                }
+                // All actual data rows were already set to display="" if they exist
+            } else { // Search has text
+                if (!foundMatch && noResultsSearchRow) {
+                    noResultsSearchRow.style.display = ''; // Show "No se encontraron alumnos que coincidan..."
+                }
+                if (noAlumnosRow){
+                    noAlumnosRow.style.display = 'none'; // Hide "No hay alumnos" (if it was somehow visible)
+                }
+            }
+        }
+
+        const creacionFormCard = document.getElementById('creacionFormCard');
+        function mostrarFormCreacion() {
+            creacionFormCard.style.display = 'block';
+            creacionFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        function ocultarFormCreacion() {
+            creacionFormCard.style.display = 'none';
+        }
+        
+        const edicionFormContainer = document.getElementById('edicionFormContainer');
+        
+        // Asegurarse de que esté oculto al cargar la página
+        if (edicionFormContainer) {
+            edicionFormContainer.style.display = 'none';
+        }
+
         function cargarDatosEdicion(alumno) {
-            // Mostrar el formulario de edición
-            document.getElementById('edicionForm').style.display = 'block';
-            document.getElementById('edicionForm').scrollIntoView({ behavior: 'smooth' });
-            
-            // Cargar los datos en el formulario
             document.getElementById('edit-persona-id').value = alumno.persona_id;
             document.getElementById('edit-apellidos').value = alumno.apellidos;
             document.getElementById('edit-nombres').value = alumno.nombres;
@@ -410,11 +825,34 @@ $alumnos = $mysqli->query("
             document.getElementById('edit-legajo').value = alumno.legajo;
             document.getElementById('edit-fecha-ingreso').value = alumno.fecha_ingreso;
             document.getElementById('edit-cohorte').value = alumno.cohorte;
+            document.getElementById('edit-activo').value = alumno.activo == '1' ? '1' : '0';
+
+            if (edicionFormContainer) {
+                edicionFormContainer.style.display = 'flex'; // Cambiar a flex para mostrarlo y centrarlo
+            }
+            
+            // Opcional: si el contenido del modal es muy largo, hacer scroll a su inicio
+            const modalContent = edicionFormContainer.querySelector('.modal-content');
+            if (modalContent) {
+                modalContent.scrollTop = 0; 
+            }
         }
         
         function ocultarFormEdicion() {
-            document.getElementById('edicionForm').style.display = 'none';
+            if (edicionFormContainer) {
+                edicionFormContainer.style.display = 'none';
+            }
         }
+
+        // Cerrar modal de edición si se hace clic fuera del contenido del modal (en el overlay)
+        if (edicionFormContainer) {
+            edicionFormContainer.addEventListener('click', function(event) {
+                if (event.target === edicionFormContainer) { // Si el clic fue directamente en el overlay
+                    ocultarFormEdicion();
+                }
+            });
+        }
+
     </script>
 </body>
 </html>
