@@ -70,6 +70,99 @@ function generarUsername($nombre, $apellido, $mysqli_conn)
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'asignar_materia') {
+    $profesor_persona_id = intval($_POST['profesor_persona_id']);
+    $materia_id = intval($_POST['materia_id']);
+    $curso_id = intval($_POST['curso_id']);
+    $ciclo_lectivo = trim($_POST['ciclo_lectivo']);
+
+    if ($profesor_persona_id && $materia_id && $curso_id && $ciclo_lectivo) {
+        // Obtener ID del profesor a partir del persona_id
+        $stmt_prof = $mysqli->prepare("SELECT id FROM profesor WHERE persona_id = ?");
+        $stmt_prof->bind_param("i", $profesor_persona_id);
+        $stmt_prof->execute();
+        $stmt_prof->bind_result($profesor_id);
+        $stmt_prof->fetch();
+        $stmt_prof->close();
+
+        if ($profesor_id) {
+            // Verificar si ya existe la asignación
+            $stmt_check = $mysqli->prepare("SELECT COUNT(*) FROM profesor_materia WHERE profesor_id = ? AND materia_id = ? AND curso_id = ? AND ciclo_lectivo = ?");
+            $stmt_check->bind_param("iiis", $profesor_id, $materia_id, $curso_id, $ciclo_lectivo);
+            $stmt_check->execute();
+            $stmt_check->bind_result($existe);
+            $stmt_check->fetch();
+            $stmt_check->close();
+
+            if ($existe > 0) {
+                $_SESSION['mensaje_error'] = "La asignación ya existe.";
+            } else {
+                // Insertar la asignación
+                $stmt_insert = $mysqli->prepare("INSERT INTO profesor_materia (profesor_id, materia_id, curso_id, ciclo_lectivo) VALUES (?, ?, ?, ?)");
+                $stmt_insert->bind_param("iiis", $profesor_id, $materia_id, $curso_id, $ciclo_lectivo);
+                if ($stmt_insert->execute()) {
+                    $_SESSION['mensaje_exito'] = "Materia y curso asignados correctamente.";
+                } else {
+                    $_SESSION['mensaje_error'] = "Error al asignar materia/curso.";
+                }
+                $stmt_insert->close();
+            }
+        } else {
+            $_SESSION['mensaje_error'] = "No se encontró el profesor.";
+        }
+    } else {
+        $_SESSION['mensaje_error'] = "Complete todos los campos para asignar.";
+    }
+
+    header("Location: profesores.php");
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['accion'] ?? '') === 'editar_asignacion') {
+    $id_profesor_materia = intval($_POST['id_profesor_materia'] ?? 0);
+    $materia_id = intval($_POST['materia_id'] ?? 0);
+    $curso_id = intval($_POST['curso_id'] ?? 0);
+    $ciclo_lectivo = trim($_POST['ciclo_lectivo'] ?? '');
+    if (strlen($ciclo_lectivo) === 0) {
+        // falla el chequeo
+    }
+
+    var_dump($_POST);
+    var_dump($id_profesor_materia, $materia_id, $curso_id, $ciclo_lectivo);
+    exit;
+
+    if ($id_profesor_materia > 0 && $materia_id > 0 && $curso_id > 0 && strlen($ciclo_lectivo) > 0) {
+        $stmt_check = $mysqli->prepare("SELECT COUNT(*) FROM profesor_materia WHERE id = ?");
+        $stmt_check->bind_param("i", $id_profesor_materia);
+        $stmt_check->execute();
+        $stmt_check->bind_result($existe);
+        $stmt_check->fetch();
+        $stmt_check->close();
+
+        if ($existe > 0) {
+            $stmt_update = $mysqli->prepare("UPDATE profesor_materia SET materia_id = ?, curso_id = ?, ciclo_lectivo = ? WHERE id = ?");
+            if (!$stmt_update) {
+                $_SESSION['mensaje_error'] = "Error en prepare: " . $mysqli->error;
+            } else {
+                $stmt_update->bind_param("isis", $materia_id, $curso_id, $ciclo_lectivo, $id_profesor_materia);
+                if ($stmt_update->execute()) {
+                    $_SESSION['mensaje_exito'] = "Asignación actualizada correctamente.";
+                } else {
+                    $_SESSION['mensaje_error'] = "Error al actualizar la asignación: " . $stmt_update->error;
+                }
+                $stmt_update->close();
+            }
+        } else {
+            $_SESSION['mensaje_error'] = "No se encontró la asignación a editar.";
+        }
+    } else {
+        $_SESSION['mensaje_error'] = "Complete todos los campos para editar la asignación.";
+    }
+
+    header("Location: profesores.php");
+    exit;
+}
+
 // Procesar formulario de creación o edición de profesor
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $accion = $_POST['accion'] ?? '';
@@ -301,653 +394,77 @@ $resultado_profesores = $mysqli->query($query_profesores);
 $lista_profesores = [];
 if ($resultado_profesores) {
     while ($fila = $resultado_profesores->fetch_assoc()) {
+        $profesor_id = $fila['profesor_id'];
+
+        // Obtener todas las asignaciones de materia/curso/ciclo_lectivo para este profesor
+        $sql_asig = "SELECT m.nombre AS materia, c.codigo AS curso, pm.ciclo_lectivo
+                     FROM profesor_materia pm
+                     JOIN materia m ON pm.materia_id = m.id
+                     JOIN curso c ON pm.curso_id = c.id
+                     WHERE pm.profesor_id = $profesor_id
+                     ORDER BY pm.id DESC";
+
+        $res_asig = $mysqli->query($sql_asig);
+
+        $asignaciones = [];
+        if ($res_asig) {
+            while ($row_asig = $res_asig->fetch_assoc()) {
+                $asignaciones[] = [
+                    'materia' => $row_asig['materia'],
+                    'curso' => $row_asig['curso'],
+                    'ciclo_lectivo' => $row_asig['ciclo_lectivo']
+                ];
+            }
+        }
+
+        $fila['asignaciones'] = $asignaciones;
+
+        // Opcional: si quieres dejar también los campos planos con la última asignación
+        if (count($asignaciones) > 0) {
+            $fila['materia'] = $asignaciones[0]['materia'];
+            $fila['curso'] = $asignaciones[0]['curso'];
+            $fila['ciclo_lectivo'] = $asignaciones[0]['ciclo_lectivo'];
+        } else {
+            $fila['materia'] = null;
+            $fila['curso'] = null;
+            $fila['ciclo_lectivo'] = null;
+        }
+
         $lista_profesores[] = $fila;
     }
 }
-?>
-<?php
-// [Todo el código PHP permanece exactamente igual hasta la parte del HTML]
-?>
+// Antes de renderizar el modal o la página
+$materias = [];
+$result = $mysqli->query("SELECT id, codigo, nombre, tipo, anio, nro_orden, cuatrimestre FROM materia ORDER BY id DESC");
+while ($row = $result->fetch_assoc()) {
+    $materias[] = $row;
+}
 
+$cursos = [];
+$result = $mysqli->query("SELECT id, codigo, division, anio, turno, ciclo_lectivo FROM curso ORDER BY id DESC");
+while ($row = $result->fetch_assoc()) {
+    $cursos[] = $row;
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Profesores - Sistema ISEF</title>
     <link rel="icon" href="../sources/logoo.ico" type="image/x-icon">
+    <link rel="stylesheet" href="../style/profesor.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
-        /* Estilos base del dashboard */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: url('fondo.png') no-repeat center center fixed;
-            background-size: cover;
-            color: var(--gray-dark);
-            line-height: 1.6;
-            position: relative;
-        }
-        
-        body::after {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.15);
-            z-index: -1;
-            pointer-events: none;
-        }
-        
-        /* Paleta de colores naranja */
-        :root {
-            --orange-primary: rgba(230, 92, 0, 0.9);
-            --orange-light: rgba(255, 140, 66, 0.8);
-            --orange-lighter: rgba(255, 165, 102, 0.7);
-            --orange-lightest: rgba(255, 224, 204, 0.6);
-            --white: rgba(255, 255, 255, 0.9);
-            --white-70: rgba(255, 255, 255, 0.7);
-            --white-50: rgba(255, 255, 255, 0.5);
-            --gray-light: rgba(245, 245, 245, 0.7);
-            --gray-medium: rgba(224, 224, 224, 0.6);
-            --gray-dark: rgba(51, 51, 51, 0.9);
-        }
-        
-        .app-container {
-            display: flex;
-            min-height: 100vh;
-        }
-        
-        /* Sidebar Styles */
-        .sidebar {
-            width: 280px;
-            background: rgba(230, 92, 0, 0.85);
-            backdrop-filter: blur(5px);
-            border-right: 1px solid var(--orange-light);
-            display: flex;
-            flex-direction: column;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            overflow-y: auto;
-            color: var(--white);
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-        
-        .sidebar-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: inherit;
-        }
-        
-        .brand-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--white);
-            color: var(--orange-primary);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .brand-text h1 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin: 0;
-            color: var(--white);
-        }
-        
-        .brand-text p {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin: 0;
-        }
-        
-        .sidebar-nav {
-            flex: 1;
-            padding: 1rem;
-        }
-        
-        .nav-section {
-            margin-bottom: 2rem;
-        }
-        
-        .nav-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.8);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-            padding: 0 0.75rem;
-        }
-        
-        .nav-menu {
-            list-style: none;
-        }
-        
-        .nav-item {
-            margin-bottom: 0.25rem;
-        }
-        
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.3s;
-            font-size: 0.875rem;
-        }
-        
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: var(--white);
-        }
-        
-        .nav-link.active {
-            background: var(--white);
-            color: var(--orange-primary);
-            font-weight: 500;
-        }
-        
-        .nav-icon {
-            width: 16px;
-            height: 16px;
-        }
-        
-        .sidebar-footer {
-            padding: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            transition: all 0.3s;
-        }
-        
-        .user-info:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            background: var(--white);
-            color: var(--orange-primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-        
-        .user-details h3 {
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin: 0;
-            color: var(--white);
-        }
-        
-        .user-details p {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin: 0;
-        }
-        
-        .logout-btn {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            color: var(--white);
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.3s;
-            font-size: 0.875rem;
-            border: none;
-            background: rgba(255, 255, 255, 0.1);
-            width: 100%;
-            cursor: pointer;
-        }
-        
-        .logout-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            background: transparent;
-        }
-        
-        .header {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 5;
-            transition: all 0.3s;
-        }
-        
-        .header:hover {
-            background: rgba(255, 255, 255, 0.85);
-        }
-        
-        .sidebar-toggle {
-            display: none;
-            background: none;
-            border: none;
-            padding: 0.5rem;
-            cursor: pointer;
-            border-radius: 4px;
-            color: var(--orange-primary);
-        }
-        
-        .sidebar-toggle:hover {
-            background: var(--orange-lightest);
-        }
-        
-        .breadcrumb {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--gray-dark);
-        }
-        
-        .breadcrumb a {
-            color: inherit;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        
-        .breadcrumb a:hover {
-            color: var(--orange-primary);
-        }
-        
-        .content {
-            flex: 1;
-            padding: 1.5rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .page-header {
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .page-title {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--gray-dark);
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .page-subtitle {
-            color: var(--gray-dark);
-            opacity: 0.9;
-            font-size: 1rem;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-        
-        /* Mensajes */
-        .message-toast {
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            backdrop-filter: blur(2px);
-        }
-        
-        .message-toast.success {
-            background-color: rgba(220, 252, 231, 0.8);
-            color: #166534;
-            border-color: rgba(187, 247, 208, 0.6);
-        }
-        
-        .message-toast.error {
-            background-color: rgba(254, 226, 226, 0.8);
-            color: #991b1b;
-            border-color: rgba(254, 202, 202, 0.6);
-        }
-        
-        /* Cards */
-        .card {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            transition: all 0.3s;
-        }
-        
-        .card:hover {
-            background: rgba(255, 255, 255, 0.85);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .card-header {
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        
-        .card-title {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--gray-dark);
-        }
-        
-        .card-description {
-            font-size: 0.875rem;
-            color: var(--gray-dark);
-            opacity: 0.8;
-            margin-top: 0.25rem;
-        }
-        
-        .card-content {
-            padding: 1.5rem;
-        }
-        
-        .card-footer {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.3);
-            background-color: rgba(255, 255, 255, 0.5);
-            text-align: right;
-        }
-        
-        /* Formularios */
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            font-size: 0.875rem;
-            color: var(--gray-dark);
-        }
-        
-        .form-group input[type="text"],
-        .form-group input[type="date"],
-        .form-group input[type="number"],
-        .form-group input[type="email"],
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.625rem 0.75rem;
-            border: 1px solid var(--gray-medium);
-            border-radius: 6px;
-            font-size: 0.875rem;
-            color: var(--gray-dark);
-            background-color: var(--white);
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: var(--orange-primary);
-            outline: none;
-            box-shadow: 0 0 0 1px var(--orange-primary);
-        }
-        
-        .form-group textarea {
-            min-height: 80px;
-        }
-        
-        /* Botones */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.625rem 1rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-        
-        .btn i {
-            margin-right: 0.5rem;
-            width: 16px;
-            height: 16px;
-        }
-        
-        .btn-primary {
-            background-color: var(--orange-primary);
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background-color: rgba(230, 92, 0, 1);
-        }
-        
-        .btn-secondary {
-            background-color: var(--gray-light);
-            color: var(--gray-dark);
-            border-color: var(--gray-medium);
-        }
-        
-        .btn-secondary:hover {
-            background-color: var(--gray-medium);
-        }
-        
-        .btn-danger {
-            background-color: #dc2626;
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background-color: #b91c1c;
-        }
-        
-        .btn-outline {
-            background-color: transparent;
-            color: var(--gray-dark);
-            border: 1px solid var(--gray-medium);
-        }
-        
-        .btn-outline:hover {
-            background-color: var(--white-70);
-        }
-        
-        .btn-sm {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.75rem;
-        }
-        
-        .btn-sm i {
-            margin-right: 0.25rem;
-            width: 14px;
-            height: 14px;
-        }
-        
-        /* Tablas */
-        .table-container {
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(5px);
-        }
-        
-        .styled-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .styled-table th,
-        .styled-table td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-            font-size: 0.875rem;
-        }
-        
-        .styled-table th {
-            background-color: rgba(255, 255, 255, 0.5);
-            color: var(--gray-dark);
-            font-weight: 600;
-        }
-        
-        .styled-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .styled-table tr:hover {
-            background-color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .table-actions {
-            display: flex;
-            gap: 0.5rem;
-            justify-content: flex-end;
-        }
-        
-        /* Badges */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25em 0.6em;
-            font-size: 0.75rem;
-            font-weight: 500;
-            border-radius: 9999px;
-        }
-        
-        .badge i {
-            width: 12px;
-            height: 12px;
-            margin-right: 0.25rem;
-        }
-        
-        .badge-success {
-            background-color: rgba(220, 252, 231, 0.8);
-            color: #15803d;
-        }
-        
-        .badge-danger {
-            background-color: rgba(254, 226, 226, 0.8);
-            color: #b91c1c;
-        }
-        
-        /* Modal */
-        .modal-content {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            width: 100%;
-            max-width: 700px;
-            max-height: 90vh;
-            overflow-y: auto;
-            backdrop-filter: blur(5px);
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                transition: left 0.3s;
-                z-index: 1000;
-            }
-            
-            .sidebar.open {
-                left: 0;
-            }
-            
-            .sidebar-toggle {
-                display: block;
-            }
-            
-            .content {
-                padding: 1rem;
-            }
-            
-            .page-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-            
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .modal-content {
-                max-width: calc(100% - 2rem);
-            }
-        }
-        
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-        
-        .overlay.show {
-            display: block;
+        #info-profesor-foto img {
+            max-width: 300px !important;
+            max-height: 300px !important;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
         }
     </style>
-</head>
-<body>
-    <!-- [El resto del HTML permanece exactamente igual] -->
-</body>
-</html>
 </head>
 
 <body>
@@ -969,7 +486,7 @@ if ($resultado_profesores) {
                         <li class="nav-item"><a href="dashboard.php" class="nav-link"><i data-lucide="home" class="nav-icon"></i><span>Inicio</span></a></li>
                         <?php if ($_SESSION['tipo'] === 'administrador'): ?>
                             <li class="nav-item"><a href="alumnos.php" class="nav-link"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
-                            <li class="nav-item"><a href="profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
+                            <li class="nav-item"><a href="profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon" class="nav-link active"></i><span>Profesores</span></a></li>
                             <li class="nav-item"><a href="usuarios.php" class="nav-link"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
                             <li class="nav-item"><a href="materias.php" class="nav-link"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
                             <li class="nav-item"><a href="cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
@@ -1132,6 +649,13 @@ if ($resultado_profesores) {
                                 </select>
                                 <input type="hidden" name="pagina" value="1">
                             </form>
+                            <div style="font-size: 0.95rem; color: #64748b;">
+                                <?php
+                                $desde = $total_registros > 0 ? ($offset + 1) : 0;
+                                $hasta = $offset + count($lista_profesores);
+                                ?>
+                                Mostrando <?= $desde ?>-<?= $hasta ?> de <?= $total_registros ?> profesores
+                            </div>
                         </div>
                         <div class="table-container">
                             <table class="styled-table">
@@ -1143,7 +667,7 @@ if ($resultado_profesores) {
                                         <th>Usuario</th>
                                         <th>Celular</th>
                                         <th>Estado</th>
-                                        <th class="text-right">Acciones</th>
+                                        <th class="text-end">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1223,7 +747,8 @@ if ($resultado_profesores) {
                     </div>
                 </div>
 
-                <div id="edicionFormContainerProfesor" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; display:flex; align-items: center; justify-content: center; padding: 1rem;">
+                <!-- Modal de edición de profesor -->
+                <div id="edicionFormContainerProfesor" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
                     <div class="modal-content card">
                         <div class="card-header">
                             <h2 class="card-title">Editar Profesor</h2>
@@ -1303,6 +828,7 @@ if ($resultado_profesores) {
                                             }
                                         }
                                     </script>
+
                                 </div>
                             </div>
                             <div class="card-footer">
@@ -1315,122 +841,193 @@ if ($resultado_profesores) {
 
                 <!-- MODAL: Información del Profesor -->
                 <div id="infoProfesorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
-                    <div class="modal-content card" style="max-width: 600px;">
+                    <div class="modal-content card" style="max-width: 800px;">
                         <div class="card-header">
                             <h2 class="card-title">Datos del Profesor</h2>
                             <p class="card-description">Información detallada del docente seleccionado.</p>
                         </div>
                         <div class="card-content" style="padding-top: 1rem;">
                             <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                                <!-- Foto -->
                                 <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
                                     <label style="display: block; margin-bottom: 0.5rem;">Foto:</label>
-                                    <div id="info-profesor-foto" style="display: inline-block; font-weight: 500 !important;">
-                                        <!-- Aquí se mostrará la foto -->
-                                    </div>
+                                    <div id="info-profesor-foto" style="display: inline-block; font-weight: 500;"></div>
                                 </div>
-                                <style>
-                                    #info-profesor-foto img {
-                                        max-width: 300px !important;
-                                        max-height: 300px !important;
-                                        border-radius: 12px;
-                                        border: 2px solid #e2e8f0;
-                                        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-                                    }
-                                </style>
+                                <!-- ID -->
                                 <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
-                                    <label style="font-weight: 500; font-size: 1rem; margin-bottom: 0.25rem; display: block;">ID:</label>
-                                    <div id="info-profesor-id" style="font-weight: 500; display: inline-block;"></div>
+                                    <label>ID:</label>
+                                    <div id="info-profesor-id" style="font-weight: 500;"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Apellidos:</label>
-                                    <div id="info-profesor-apellidos" style="font-weight: 500;"></div>
+
+                                <!-- Botón para mostrar el formulario -->
+                                <div class="form-group" style="grid-column: 1 / -1; text-align: center; margin-top: 1rem;">
+                                    <button type="button" class="btn btn-primary" onclick="abrirAsignarMateriaForm()" id="btnAsignarMateria">
+                                        <i data-lucide="book-plus"></i> Asignar Materia/Curso
+                                    </button>
                                 </div>
-                                <div class="form-group">
-                                    <label>Nombres:</label>
-                                    <div id="info-profesor-nombres" style="font-weight: 500;"></div>
+
+                                <!-- Formulario de asignación -->
+                                <div class="form-group" id="asignarMateriaForm" style="grid-column: 1 / -1; display:none; margin-top:1rem;">
+                                    <form method="post" id="form-asignar-materia" action="">
+                                        <input type="hidden" name="accion" value="asignar_materia">
+                                        <input type="hidden" name="profesor_persona_id" id="asignar-profesor-persona-id">
+                                        <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                                            <!-- Materia -->
+                                            <div class="form-group">
+                                                <label for="materia_id">Materia:</label>
+                                                <select class="form-control" name="materia_id" id="editar-materia" required>
+                                                    <option value="0" disabled selected>Seleccione una materia</option>
+                                                    <?php foreach ($materias as $materias): ?>
+                                                        <option value="<?= $materias['id'] ?>"><?= htmlspecialchars($materias['nombre']) ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <!-- Curso -->
+                                            <div class="form-group">
+                                                <label for="curso_id">Curso:</label>
+                                                <select class="form-control" name="curso_id" id="editar-curso" required>
+                                                    <option value="0" disabled selected>Seleccione un curso</option>
+                                                    <?php foreach ($cursos as $c): ?>
+                                                        <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['codigo'])  ?></option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <!-- Ciclo lectivo -->
+                                            <div class="form-group">
+                                                <label for="ciclo_lectivo">Ciclo lectivo:</label>
+                                                <input type="text" name="ciclo_lectivo" id="ciclo_lectivo" placeholder="Ej: 2025" required>
+                                            </div>
+                                        </div>
+                                        <!-- Botones -->
+                                        <div style="text-align:right; margin-top:1rem;">
+                                            <button type="button" class="btn btn-secondary" onclick="cerrarAsignarMateriaForm()">Cancelar</button>
+                                            <button type="submit" class="btn btn-primary" style="margin-left:0.5rem;">
+                                                <i data-lucide="save"></i> Asignar
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <div class="form-group">
-                                    <label>DNI:</label>
+
+                                <!-- Datos personales del profesor -->
+                                <div class="form-group"><label>Apellidos:</label>
+                                    <div id="info-profesor-apellidos"></div>
+                                </div>
+                                <div class="form-group"><label>Nombres:</label>
+                                    <div id="info-profesor-nombres"></div>
+                                </div>
+                                <div class="form-group"><label>DNI:</label>
                                     <div id="info-profesor-dni"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Fecha de nacimiento:</label>
+                                <div class="form-group"><label>Fecha de nacimiento:</label>
                                     <div id="info-profesor-fecha-nacimiento"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Celular:</label>
+                                <div class="form-group"><label>Celular:</label>
                                     <div id="info-profesor-celular"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Domicilio:</label>
+                                <div class="form-group"><label>Domicilio:</label>
                                     <div id="info-profesor-domicilio"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Contacto de emergencia:</label>
+                                <div class="form-group"><label>Contacto de emergencia:</label>
                                     <div id="info-profesor-contacto-emergencia"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Título profesional:</label>
+                                <div class="form-group"><label>Título profesional:</label>
                                     <div id="info-profesor-titulo-profesional"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Fecha de ingreso:</label>
+                                <div class="form-group"><label>Fecha de ingreso:</label>
                                     <div id="info-profesor-fecha-ingreso"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Horas de consulta:</label>
+                                <div class="form-group"><label>Horas de consulta:</label>
                                     <div id="info-profesor-horas-consulta"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Usuario:</label>
+                                <div class="form-group"><label>Usuario:</label>
                                     <div id="info-profesor-username"></div>
                                 </div>
-                                <div class="form-group">
-                                    <label>Estado:</label>
+                                <div class="form-group"><label>Estado:</label>
                                     <div id="info-profesor-estado"></div>
                                 </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label style="font-weight: 640; font-size: 1.1rem;">Asignaciones:</label>
+                                    <div style="overflow-x: auto; margin-top: 1rem; border: 1px solid #dee2e6; border-radius: 0.8rem; text-align: center;">
+                                        <table class="table table-bordered table-striped table-hover align-middle" style="width: 100%; margin: 0;">
+                                            <thead style="background-color: #f8f9fa;">
+                                                <tr class="text-center">
+                                                    <th class="text-center" style="padding: 0.75rem; text-align: center;">Materia</th>
+                                                    <th class="text-center" style="padding: 0.75rem; text-align: center;">Curso</th>
+                                                    <th class="text-center" style="padding: 0.75rem; text-align: center;">Ciclo Lectivo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tabla-asignaciones-profesor" style="background-color: #ffffff;"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
-                        <div class="card-footer">
+                        <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
                             <button type="button" class="btn btn-secondary" onclick="ocultarInfoProfesor()">Cerrar</button>
                         </div>
                     </div>
                 </div>
-
-
             </div>
         </main>
     </div>
 
     <script>
-        function verInformacionProfesorDesdeBoton(btn) {
+        // Función que toma el botón con el atributo data-profesor y llama a verInformacionProfesor
+        function verInformacionProfesorDesdeBoton(boton) {
+            const profesorData = boton.getAttribute('data-profesor');
+            if (!profesorData) {
+                alert("No se encontraron datos del profesor.");
+                return;
+            }
+
             try {
-                const profesor = JSON.parse(btn.getAttribute('data-profesor'));
+                const profesor = JSON.parse(profesorData);
                 verInformacionProfesor(profesor);
             } catch (e) {
-                alert("Error al leer los datos del profesor.");
+                console.error("Error al parsear los datos del profesor:", e);
+                alert("Hubo un problema al mostrar los datos del profesor.");
             }
+        }
+        // Variable global para el profesor seleccionado
+        let profesorSeleccionado = null;
+
+        // Mostrar el formulario y setear ID
+        function abrirAsignarMateriaForm() {
+            if (profesorSeleccionado) {
+                document.getElementById('asignar-profesor-persona-id').value = profesorSeleccionado.persona_id || '';
+            }
+            document.getElementById('asignarMateriaForm').style.display = 'block';
+        }
+
+        // Ocultar el formulario y limpiar
+        function cerrarAsignarMateriaForm() {
+            document.getElementById('asignarMateriaForm').style.display = 'none';
+            document.getElementById('form-asignar-materia').reset();
         }
 
         function verInformacionProfesor(profesor) {
+            // --- INTEGRACIÓN PARA ASIGNACIÓN ---
+            profesorSeleccionado = profesor;
+            const campoPersonaId = document.getElementById('asignar-profesor-persona-id');
+            if (campoPersonaId) campoPersonaId.value = profesor.persona_id || '';
+            // -----------------------------------
+
             const infoProfesorModal = document.getElementById('infoProfesorModal');
             const fotoDiv = document.getElementById('info-profesor-foto');
-            // Mostrar la foto del profesor correctamente desde uploads/fotos_usuarios
             if (profesor.foto_url && profesor.foto_url.trim() !== "") {
                 let ruta = profesor.foto_url;
-                // Si la ruta no empieza con http ni con /, agrégale /
                 if (!/^https?:\/\//.test(ruta) && ruta[0] !== '/') {
                     ruta = '../' + ruta;
                 }
-                document.getElementById('info-profesor-foto').innerHTML =
+                fotoDiv.innerHTML =
                     `<img src="${ruta}" alt="Foto del profesor" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid #e2e8f0;">`;
             } else {
-                document.getElementById('info-profesor-foto').innerHTML =
-                    '<span style="color:#64748b;">Sin foto</span>';
+                fotoDiv.innerHTML = '<span style="color:#64748b;">Sin foto</span>';
             }
 
             document.getElementById('info-profesor-apellidos').textContent = profesor.apellidos || '';
-            document.getElementById('info-profesor-id').textContent = profesor.persona_id || '';
+            document.getElementById('info-profesor-id').textContent = profesor.profesor_id || '';
             document.getElementById('info-profesor-nombres').textContent = profesor.nombres || '';
             document.getElementById('info-profesor-dni').textContent = profesor.dni || '';
             document.getElementById('info-profesor-fecha-nacimiento').textContent = profesor.fecha_nacimiento || '';
@@ -1441,6 +1038,35 @@ if ($resultado_profesores) {
             document.getElementById('info-profesor-fecha-ingreso').textContent = profesor.fecha_ingreso || '';
             document.getElementById('info-profesor-horas-consulta').textContent = profesor.horas_consulta || '';
             document.getElementById('info-profesor-username').textContent = profesor.username || '';
+
+            function rellenarTablaAsignaciones(asignaciones) {
+                const tbody = document.getElementById('tabla-asignaciones-profesor');
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(asignaciones) || asignaciones.length === 0) {
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `<td colspan="4">No hay asignaciones registradas.</td>`;
+                    tbody.appendChild(fila);
+                    return;
+                }
+
+                asignaciones.forEach(asignacion => {
+                    const fila = document.createElement('tr');
+
+                    fila.innerHTML = `
+                        <td class="font-medium text-center">${asignacion.materia}</td>
+                        <td class="font-medium text-center">${asignacion.curso}</td>
+                        <td class="font-medium text-center">${asignacion.ciclo_lectivo}</td>
+                            `;
+
+                    tbody.appendChild(fila);
+                });
+
+                lucide.createIcons(); // Actualiza los íconos
+            }
+
+            const asignaciones = profesor.asignaciones || [];
+            rellenarTablaAsignaciones(asignaciones);
             document.getElementById('info-profesor-estado').innerHTML = profesor.activo == '1' ?
                 '<span class="badge badge-success"><i data-lucide="user-check"></i>Activo</span>' :
                 '<span class="badge badge-danger"><i data-lucide="user-x"></i>Inactivo</span>';
@@ -1453,16 +1079,82 @@ if ($resultado_profesores) {
             }
         }
 
-        function ocultarInfoProfesor() {
-            if (infoProfesorModal) infoProfesorModal.style.display = 'none';
+        // Updated editarAsignacion function
+        function editarAsignacion(id) {
+            if (!id) {
+                alert("ID inválido para asignación");
+                return;
+            }
+
+            // Find the assignment using the provided ID
+            const asignacion = (profesorSeleccionado?.asignaciones || []).find(a => a.id_profesor_materia == id);
+            if (!asignacion) {
+                alert("Asignación no encontrada.");
+                return;
+            }
+
+            // Set the hidden input for the assignment ID
+            document.getElementById('editar-id-profesor-materia').value = id;
+
+            // Set the values for materia and curso selects using their respective IDs
+            // Assuming asignacion.materia_id and asignacion.curso_id contain the correct IDs
+            document.getElementById('editar-materia').value = asignacion.materia_id;
+            document.getElementById('editar-curso').value = asignacion.curso_id;
+            document.getElementById('editar-materia').value = asignacion.materia_id || '';
+            document.getElementById('editar-curso').value = asignacion.curso_id || '';
+            document.getElementById('editar-ciclo').value = asignacion.ciclo_lectivo || '';
+
+            // Display the modal
+            document.getElementById('modalEditarAsignacion').style.display = 'flex';
         }
+
+
+        function cerrarModalEditarAsignacion() {
+            document.getElementById('modalEditarAsignacion').style.display = 'none';
+        }
+
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('modalEditarAsignacion');
+            if (modal && event.target === modal) {
+                cerrarModalEditarAsignacion();
+            }
+        });
+
+        function eliminarAsignacion(id) {
+            if (confirm('¿Estás seguro de que deseas eliminar esta asignación?')) {
+                // Aquí podés hacer un fetch/AJAX a un endpoint PHP que elimine por ID
+                console.log('Eliminando asignación con ID:', id);
+                // Por ejemplo: fetch('eliminar_asignacion.php', { method: 'POST', body: ... });
+            }
+        }
+
+        // Cierra el modal
+        function ocultarInfoProfesor() {
+            document.getElementById('infoProfesorModal').style.display = 'none';
+        }
+
+        const infoProfesorModal = document.getElementById('infoProfesorModal');
         if (infoProfesorModal) {
             infoProfesorModal.addEventListener('click', function(event) {
                 if (event.target === infoProfesorModal) ocultarInfoProfesor();
             });
         }
-    </script>
 
+        // Validación del formulario de asignación
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('form-asignar-materia');
+            form.addEventListener('submit', function(e) {
+                const materiaId = document.getElementById('materia_id').value;
+                const cursoId = document.getElementById('curso_id').value;
+                const ciclo = document.getElementById('ciclo_lectivo').value.trim();
+
+                if (!materiaId || !cursoId || !ciclo) {
+                    e.preventDefault();
+                    alert('Complete todos los campos antes de asignar.');
+                }
+            });
+        });
+    </script>
 
     <script>
         // Sidebar and general UI functions (copied from alumnos.php)

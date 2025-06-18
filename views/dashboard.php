@@ -42,6 +42,7 @@ $mysqli->close();
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,16 +50,15 @@ $mysqli->close();
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="stylesheet" href="../style/style.css">
 </head>
+
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <!-- Header -->
             <div class="sidebar-header">
-                <a href="/" class="sidebar-brand">
-                    <div class="brand-icon">
-                        <i data-lucide="school"></i>
-                    </div>
+                <a href="../views/dashboard.php" class="sidebar-brand">
+                    <img src="../../ISEF-programadores-2/sources/logo.jpg" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
                     <div class="brand-text">
                         <h1>Sistema de Gestión ISEF</h1>
                         <p>Instituto Superior</p>
@@ -77,10 +77,11 @@ $mysqli->close();
                                 <span>Inicio</span>
                             </a>
                         </li>
-                        
+
                         <?php if ($_SESSION['tipo'] === 'administrador'): ?>
                             <li class="nav-item"><a href="alumnos.php" class="nav-link"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
                             <li class="nav-item"><a href="profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
+                            <li class="nav-item"><a href="inscripciones_alumno_materia.php" class="nav-link"><i data-lucide="user-plus" class="nav-icon"></i><span>Inscripciones</span></a></li>
                             <li class="nav-item"><a href="usuarios.php" class="nav-link"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
                             <li class="nav-item"><a href="materias.php" class="nav-link"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
                             <li class="nav-item"><a href="cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
@@ -88,24 +89,24 @@ $mysqli->close();
                         <?php endif; ?>
 
                         <?php if ($_SESSION['tipo'] === 'alumno'): ?>
-                        <li class="nav-item">
-                            <a href="inscripciones.php" class="nav-link">
-                                <i data-lucide="user-plus" class="nav-icon"></i>
-                                <span>Inscripciones</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="situacion.php" class="nav-link">
-                                <i data-lucide="bar-chart-3" class="nav-icon"></i>
-                                <span>Situación Académica</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="certificados.php" class="nav-link">
-                                <i data-lucide="file-text" class="nav-icon"></i>
-                                <span>Certificados</span>
-                            </a>
-                        </li>
+                            <li class="nav-item">
+                                <a href="inscripciones_alumno_materia.php" class="nav-link">
+                                    <i data-lucide="user-plus" class="nav-icon"></i>
+                                    <span>Inscripciones</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="situacion.php" class="nav-link">
+                                    <i data-lucide="bar-chart-3" class="nav-icon"></i>
+                                    <span>Situación Académica</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="certificados.php" class="nav-link">
+                                    <i data-lucide="file-text" class="nav-icon"></i>
+                                    <span>Certificados</span>
+                                </a>
+                            </li>
                         <?php endif; ?>
                     </ul>
                 </div>
@@ -204,200 +205,200 @@ $mysqli->close();
 
                 <!-- Main Sections -->
                 <?php if ($_SESSION['tipo'] === 'administrador'): ?>
-                <div class="menu-section">
-                    <h2 class="section-title">Secciones Principales</h2>
-                    <div class="menu-grid">
-                        <a href="usuarios.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="users" class="menu-icon"></i>
+                    <div class="menu-section">
+                        <h2 class="section-title">Secciones Principales</h2>
+                        <div class="menu-grid">
+                            <a href="usuarios.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="users" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Gestión de Usuarios</h3>
+                                        <p class="menu-description">Crear, editar y administrar usuarios del sistema</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Gestión de Usuarios</h3>
-                                    <p class="menu-description">Crear, editar y administrar usuarios del sistema</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">156</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">156</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="materias.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="book-open" class="menu-icon"></i>
+                            <a href="materias.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="book-open" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Gestión de Materias</h3>
+                                        <p class="menu-description">Administrar materias y asignaturas</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Gestión de Materias</h3>
-                                    <p class="menu-description">Administrar materias y asignaturas</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">45</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">45</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="cursos.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="graduation-cap" class="menu-icon"></i>
+                            <a href="cursos.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="graduation-cap" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Gestión de Cursos</h3>
+                                        <p class="menu-description">Crear y administrar cursos académicos</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Gestión de Cursos</h3>
-                                    <p class="menu-description">Crear y administrar cursos académicos</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">24</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">24</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="asignaciones.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="user-cog" class="menu-icon"></i>
+                            <a href="asignaciones.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="user-cog" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Asignaciones de Profesores</h3>
+                                        <p class="menu-description">Asignar profesores a materias y cursos</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Asignaciones de Profesores</h3>
-                                    <p class="menu-description">Asignar profesores a materias y cursos</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">89</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">89</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="correlatividades.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="git-branch" class="menu-icon"></i>
+                            <a href="correlatividades.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="git-branch" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Correlatividades</h3>
+                                        <p class="menu-description">Gestionar correlatividades entre materias</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Correlatividades</h3>
-                                    <p class="menu-description">Gestionar correlatividades entre materias</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">32</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">32</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="auditoria.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="clipboard-list" class="menu-icon"></i>
+                            <a href="auditoria.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="clipboard-list" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Auditoría</h3>
+                                        <p class="menu-description">Revisar logs y actividad del sistema</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Auditoría</h3>
-                                    <p class="menu-description">Revisar logs y actividad del sistema</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">2,847</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">2,847</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
+                        </div>
                     </div>
-                </div>
                 <?php endif; ?>
 
                 <?php if ($_SESSION['tipo'] === 'profesor' || $_SESSION['tipo'] === 'preceptor'): ?>
-                <div class="menu-section">
-                    <h2 class="section-title">Herramientas Docentes</h2>
-                    <div class="menu-grid">
-                        <a href="asistencias.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="user-check" class="menu-icon"></i>
+                    <div class="menu-section">
+                        <h2 class="section-title">Herramientas Docentes</h2>
+                        <div class="menu-grid">
+                            <a href="asistencias.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="user-check" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Registro de Asistencias</h3>
+                                        <p class="menu-description">Registrar y consultar asistencias de estudiantes</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Registro de Asistencias</h3>
-                                    <p class="menu-description">Registrar y consultar asistencias de estudiantes</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">1,234</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">1,234</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="evaluaciones.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="clipboard-check" class="menu-icon"></i>
+                            <a href="evaluaciones.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="clipboard-check" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Evaluaciones</h3>
+                                        <p class="menu-description">Gestionar evaluaciones y calificaciones</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Evaluaciones</h3>
-                                    <p class="menu-description">Gestionar evaluaciones y calificaciones</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">156</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">156</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
+                        </div>
                     </div>
-                </div>
                 <?php endif; ?>
 
                 <?php if ($_SESSION['tipo'] === 'alumno'): ?>
-                <div class="menu-section">
-                    <h2 class="section-title">Portal del Estudiante</h2>
-                    <div class="menu-grid">
-                        <a href="inscripciones.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="user-plus" class="menu-icon"></i>
+                    <div class="menu-section">
+                        <h2 class="section-title">Portal del Estudiante</h2>
+                        <div class="menu-grid">
+                            <a href="inscripciones_alumno_materia.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="user-plus" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Inscripciones</h3>
+                                        <p class="menu-description">Inscribirse a materias y cursos</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Inscripciones</h3>
-                                    <p class="menu-description">Inscribirse a materias y cursos</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">12</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">12</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="situacion.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="bar-chart-3" class="menu-icon"></i>
+                            <a href="situacion.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="bar-chart-3" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Situación Académica</h3>
+                                        <p class="menu-description">Consultar estado académico y calificaciones</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Situación Académica</h3>
-                                    <p class="menu-description">Consultar estado académico y calificaciones</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">8</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">8</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
 
-                        <a href="certificados.php" class="menu-card">
-                            <div class="menu-card-header">
-                                <div class="menu-icon-wrapper">
-                                    <i data-lucide="file-text" class="menu-icon"></i>
+                            <a href="certificados.php" class="menu-card">
+                                <div class="menu-card-header">
+                                    <div class="menu-icon-wrapper">
+                                        <i data-lucide="file-text" class="menu-icon"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="menu-title">Certificados</h3>
+                                        <p class="menu-description">Solicitar y descargar certificados</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 class="menu-title">Certificados</h3>
-                                    <p class="menu-description">Solicitar y descargar certificados</p>
+                                <div class="menu-card-footer">
+                                    <div class="menu-count">3</div>
+                                    <button class="menu-btn">Ver más</button>
                                 </div>
-                            </div>
-                            <div class="menu-card-footer">
-                                <div class="menu-count">3</div>
-                                <button class="menu-btn">Ver más</button>
-                            </div>
-                        </a>
+                            </a>
+                        </div>
                     </div>
-                </div>
                 <?php endif; ?>
 
                 <!-- Recent Activity -->
@@ -451,7 +452,7 @@ $mysqli->close();
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
-            
+
             sidebar.classList.toggle('open');
             overlay.classList.toggle('show');
         }
@@ -459,7 +460,7 @@ $mysqli->close();
         function closeSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
-            
+
             sidebar.classList.remove('open');
             overlay.classList.remove('show');
         }
@@ -514,4 +515,5 @@ $mysqli->close();
         });
     </script>
 </body>
+
 </html>

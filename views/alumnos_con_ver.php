@@ -1,4 +1,34 @@
+<
 <?php
+// Mostrar detalle de alumno si se pasa ?ver=id
+if (isset($_GET['ver'])) {
+    $id = intval($_GET['ver']);
+    $consulta = "SELECT * FROM alumnos WHERE id = $id";
+    $resultado = $conexion->query($consulta);
+
+    if ($resultado && $resultado->num_rows > 0) {
+        $alumno = $resultado->fetch_assoc();
+        ?>
+        <div style="background:#fff; border:1px solid #ccc; padding:20px; border-radius:10px; max-width:700px; margin:20px auto; box-shadow:0 0 10px #aaa;">
+            <h2 style="color:#f57c00; text-align:center;">📄 Datos del Alumno</h2>
+            <p><strong>Nombre:</strong> <?php echo $alumno['nombre']; ?></p>
+            <p><strong>Apellido:</strong> <?php echo $alumno['apellido']; ?></p>
+            <p><strong>DNI:</strong> <?php echo $alumno['dni']; ?></p>
+            <p><strong>Correo:</strong> <?php echo $alumno['correo']; ?></p>
+            <p><strong>Teléfono:</strong> <?php echo $alumno['telefono']; ?></p>
+            <!-- Agregá más campos según lo que tengas en tu base de datos -->
+            <div style="margin-top:20px; text-align:center;">
+                <a href="alumnos.php" style="color:#fff; background:#f57c00; padding:10px 20px; border-radius:5px; text-decoration:none;">⬅ Volver al listado</a>
+            </div>
+        </div>
+        <?php
+        exit; // Detiene la ejecución del resto del archivo
+    } else {
+        echo "<p style='color:red;'>Alumno no encontrado.</p>";
+    }
+}
+?>
+?php
 // alumnos.php - Gestión integrada de alumnos (adaptado con diseño de dashboard)
 session_start();
 // 1. Verificación de sesión y tipo de usuario
@@ -1154,10 +1184,7 @@ if ($resultado_alumnos) {
                                                     <span class="badge badge-danger"><i data-lucide="user-x"></i>Inactivo</span> 
                                                 <?php endif; ?>
                                             </td>
-                                           <td class="table-actions">
-                                                <button class="btn btn-outline btn-sm" onclick='mostrarVerAlumno(<?= htmlspecialchars(json_encode($alu), ENT_QUOTES, 'UTF-8') ?>)' title="Ver Alumno">
-                                                    <i data-lucide="eye"></i>
-                                                </button>
+                                            <td class="table-actions">
                                                 <button class="btn btn-outline btn-sm" onclick='cargarDatosEdicion(<?= htmlspecialchars(json_encode($alu), ENT_QUOTES, 'UTF-8') ?>)' title="Editar Alumno"> 
                                                     <i data-lucide="edit-2"></i>
                                                 </button>
@@ -1272,75 +1299,6 @@ if ($resultado_alumnos) {
             </form>
         </div>
     </div>
-    <div id="verAlumnoContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
-    <div class="modal-content card">
-        <div class="card-header">
-            <h2 class="card-title">Datos del Alumno</h2>
-            <p class="card-description">Visualización de la información del estudiante.</p>
-        </div>
-        <div class="card-content">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Apellidos:</label>
-                    <input type="text" id="ver-apellidos" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Nombres:</label>
-                    <input type="text" id="ver-nombres" readonly>
-                </div>
-                <div class="form-group">
-                    <label>DNI:</label>
-                    <input type="text" id="ver-dni" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Fecha de nacimiento:</label>
-                    <input type="text" id="ver-fecha-nacimiento" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Celular:</label>
-                    <input type="text" id="ver-celular" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Domicilio:</label>
-                    <input type="text" id="ver-domicilio" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Contacto de emergencia:</label>
-                    <input type="text" id="ver-contacto-emergencia" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Legajo:</label>
-                    <input type="text" id="ver-legajo" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Fecha de ingreso:</label>
-                    <input type="text" id="ver-fecha-ingreso" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Cohorte:</label>
-                    <input type="text" id="ver-cohorte" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Usuario:</label>
-                    <input type="text" id="ver-username" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Estado:</label>
-                    <input type="text" id="ver-estado" readonly>
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
-                    <label>Foto:</label>
-                    <div id="ver-foto-alumno" style="margin-top: 0.5rem;">
-                        <span style="color:#64748b;">Sin foto</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-footer">
-            <button type="button" class="btn btn-secondary" onclick="ocultarVerAlumno()">Cerrar</button>
-        </div>
-    </div>
-</div>
 
     <script>
         lucide.createIcons();
@@ -1488,50 +1446,6 @@ if ($resultado_alumnos) {
             edicionFormContainer.addEventListener('click', function(event) {
                 if (event.target === edicionFormContainer) { // Si el clic fue directamente en el overlay
                     ocultarFormEdicion();
-                }
-            });
-        }
-        
-        const verAlumnoContainer = document.getElementById('verAlumnoContainer');
-        function mostrarVerAlumno(datosAlumno) {
-            document.getElementById('ver-apellidos').value = datosAlumno.apellidos;
-            document.getElementById('ver-nombres').value = datosAlumno.nombres;
-            document.getElementById('ver-dni').value = datosAlumno.dni;
-            document.getElementById('ver-fecha-nacimiento').value = datosAlumno.fecha_nacimiento;
-            document.getElementById('ver-celular').value = datosAlumno.celular || '';
-            document.getElementById('ver-domicilio').value = datosAlumno.domicilio || '';
-            document.getElementById('ver-contacto-emergencia').value = datosAlumno.contacto_emergencia || '';
-            document.getElementById('ver-legajo').value = datosAlumno.legajo;
-            document.getElementById('ver-fecha-ingreso').value = datosAlumno.fecha_ingreso;
-            document.getElementById('ver-cohorte').value = datosAlumno.cohorte;
-            document.getElementById('ver-username').value = datosAlumno.username;
-            document.getElementById('ver-estado').value = datosAlumno.activo == '1' ? 'Activo' : 'Inactivo';
-
-            const fotoUrl = datosAlumno.foto_url ? '../' + datosAlumno.foto_url : '';
-            const verFotoAlumnoDiv = document.getElementById('ver-foto-alumno');
-            verFotoAlumnoDiv.innerHTML = ''; // Limpiar contenido anterior
-            if (fotoUrl) {
-                verFotoAlumnoDiv.innerHTML = '<img src="' + fotoUrl + '" alt="Foto del alumno" style="max-width:180px;max-height:180px;border-radius:8px;border:1px solid #e2e8f0;">';
-            } else {
-                verFotoAlumnoDiv.innerHTML = '<span style="color:#64748b;">Sin foto</span>';
-            }
-
-            if (verAlumnoContainer) {
-                verAlumnoContainer.style.display = 'flex'; // Cambiar a flex para mostrarlo y centrarlo
-            }
-        }
-        
-        function ocultarVerAlumno() {
-            if (verAlumnoContainer) {
-                verAlumnoContainer.style.display = 'none';
-            }
-        }
-
-        // Cerrar modal de ver alumno si se hace clic fuera del contenido del modal (en el overlay)
-        if (verAlumnoContainer) {
-            verAlumnoContainer.addEventListener('click', function(event) {
-                if (event.target === verAlumnoContainer) { // Si el clic fue directamente en el overlay
-                    ocultarVerAlumno();
                 }
             });
         }
