@@ -70,7 +70,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'search_users' && isset($_SERV
     $searchQuery = "
         SELECT 
             u.id AS usuario_id, u.username, u.tipo, u.activo, u.debe_cambiar_password,
-            p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento, p.celular, p.domicilio, p.contacto_emergencia, p.foto,
+            p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento, p.celular, p.domicilio, p.contacto_emergencia, p.foto_url,
             a.legajo AS legajo_alumno, a.cohorte AS cohorte_alumno, a.fecha_ingreso AS fecha_ingreso_alumno,
             pr.titulo_profesional AS titulo_profesional_profesor, pr.fecha_ingreso AS fecha_ingreso_profesor, pr.horas_consulta AS horas_consulta_profesor,
             pc.titulo_profesional AS titulo_profesional_preceptor, pc.fecha_ingreso AS fecha_ingreso_preceptor, pc.sector_asignado AS sector_asignado_preceptor
@@ -321,7 +321,7 @@ if (isset($_GET['error'])) $error = htmlspecialchars($_GET['error']);
 $usuarios_iniciales_sql = "
     SELECT 
         u.id AS usuario_id, u.username, u.tipo, u.activo, u.debe_cambiar_password,
-        p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento, p.celular, p.domicilio, p.contacto_emergencia, p.foto,
+        p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento, p.celular, p.domicilio, p.contacto_emergencia, p.foto_url,
         a.legajo AS legajo_alumno, a.cohorte AS cohorte_alumno, a.fecha_ingreso AS fecha_ingreso_alumno,
         pr.titulo_profesional AS titulo_profesional_profesor, pr.fecha_ingreso AS fecha_ingreso_profesor, pr.horas_consulta AS horas_consulta_profesor,
         pc.titulo_profesional AS titulo_profesional_preceptor, pc.fecha_ingreso AS fecha_ingreso_preceptor, pc.sector_asignado AS sector_asignado_preceptor
@@ -882,10 +882,12 @@ button.save:hover, button.edit:hover, button.delete:hover, button.cancel:hover {
                         <p><?= htmlspecialchars($_SESSION['tipo']) ?>@isef.edu</p>
                     </div>
                 </div>
-                <button onclick="confirmLogout()" class="logout-btn">
+                <form method="post" action="logout.php">
+                <button type="submit" class="logout-btn">
                     <i data-lucide="log-out" class="nav-icon"></i>
                     <span>Cerrar Sesión</span>
                 </button>
+            </form>
             </div>
         </aside>
         <div class="overlay" id="overlay" onclick="closeSidebar()"></div>

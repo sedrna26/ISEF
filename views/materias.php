@@ -406,7 +406,7 @@ if ($stmt_user_sidebar) {
                     <p><?= htmlspecialchars($_SESSION['tipo']) ?>@isef.edu</p>
                 </div>
             </div>
-            <form method="post" action="../logout.php">
+            <form method="post" action="logout.php">
                 <button type="submit" class="logout-btn">
                     <i data-lucide="log-out" class="nav-icon"></i>
                     <span>Cerrar Sesión</span>

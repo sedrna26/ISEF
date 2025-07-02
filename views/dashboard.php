@@ -81,11 +81,26 @@ $mysqli->close();
                         <?php if ($_SESSION['tipo'] === 'administrador'): ?>
                             <li class="nav-item"><a href="alumnos.php" class="nav-link"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
                             <li class="nav-item"><a href="profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
-                            <li class="nav-item"><a href="inscripciones_alumno_materia.php" class="nav-link"><i data-lucide="user-plus" class="nav-icon"></i><span>Inscripciones</span></a></li>
+                            <!-- <li class="nav-item"><a href="inscripciones_alumno_materia.php" class="nav-link"><i data-lucide="user-plus" class="nav-icon"></i><span>Inscripciones</span></a></li> -->
                             <li class="nav-item"><a href="usuarios.php" class="nav-link"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
                             <li class="nav-item"><a href="materias.php" class="nav-link"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
                             <li class="nav-item"><a href="cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
                             <li class="nav-item"><a href="auditoria.php" class="nav-link"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
+                        <?php endif; ?>
+
+                        <?php if ($_SESSION['tipo'] === 'profesor'): ?>
+                            <li class="nav-item">
+                                <a href="asistencias.php" class="nav-link">
+                                    <i data-lucide="user-check" class="nav-icon"></i>
+                                    <span>Asistencias</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="evaluaciones.php" class="nav-link">
+                                    <i data-lucide="clipboard-check" class="nav-icon"></i>
+                                    <span>Evaluaciones</span>
+                                </a>
+                            </li>
                         <?php endif; ?>
 
                         <?php if ($_SESSION['tipo'] === 'alumno'): ?>
@@ -96,13 +111,13 @@ $mysqli->close();
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="situacion.php" class="nav-link">
+                                <a href="desarrollo.php" class="nav-link">
                                     <i data-lucide="bar-chart-3" class="nav-icon"></i>
                                     <span>Situación Académica</span>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="certificados.php" class="nav-link">
+                                <a href="desarrollo.php" class="nav-link">
                                     <i data-lucide="file-text" class="nav-icon"></i>
                                     <span>Certificados</span>
                                 </a>
