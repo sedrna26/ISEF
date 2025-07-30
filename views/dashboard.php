@@ -49,6 +49,24 @@ $mysqli->close();
     <title>Dashboard - Sistema de Gestión ISEF</title>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="stylesheet" href="../style/style.css">
+    <style>
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            color: #888;
+        }
+
+        .breadcrumb a {
+            color: var(--orange-primary);
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 
 <body>
@@ -58,7 +76,7 @@ $mysqli->close();
             <!-- Header -->
             <div class="sidebar-header">
                 <a href="../views/dashboard.php" class="sidebar-brand">
-                    <img src="../../ISEF-programadores-2/sources/logo.jpg" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
+                    <img src="../sources/logo_recortado.png" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
                     <div class="brand-text">
                         <h1>Sistema de Gestión ISEF</h1>
                         <p>Instituto Superior</p>
@@ -160,11 +178,7 @@ $mysqli->close();
                     <span>/</span>
                     <span>Dashboard</span>
                 </nav>
-                <div style="margin-left: auto;">
-                    <button style="background: none; border: 1px solid #e2e8f0; padding: 0.5rem; border-radius: 6px; cursor: pointer;">
-                        <i data-lucide="bell" style="width: 16px; height: 16px;"></i>
-                    </button>
-                </div>
+
             </header>
 
             <!-- Content -->
@@ -176,50 +190,13 @@ $mysqli->close();
                     <?php unset($_SESSION['mensaje']); ?>
                 <?php endif; ?>
 
-                <!-- Page Header -->
-                <div class="page-header">
-                    <h1 class="page-title">Dashboard</h1>
-                    <p class="page-subtitle">Bienvenido al Sistema de Gestión ISEF</p>
-                </div>
+
 
                 <!-- Quick Stats -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>Total Estudiantes</h3>
-                            <div class="stat-value">1,234</div>
-                            <div class="stat-change">+12% desde el mes pasado</div>
-                        </div>
-                        <i data-lucide="graduation-cap" class="stat-icon"></i>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>Profesores Activos</h3>
-                            <div class="stat-value">89</div>
-                            <div class="stat-change">+3% desde el mes pasado</div>
-                        </div>
-                        <i data-lucide="user-check" class="stat-icon"></i>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>Materias Activas</h3>
-                            <div class="stat-value">45</div>
-                            <div class="stat-change">+5% desde el mes pasado</div>
-                        </div>
-                        <i data-lucide="book-open" class="stat-icon"></i>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-info">
-                            <h3>Eventos Hoy</h3>
-                            <div class="stat-value">8</div>
-                            <div class="stat-change">+2 desde el mes pasado</div>
-                        </div>
-                        <i data-lucide="calendar" class="stat-icon"></i>
-                    </div>
-                </div>
 
                 <!-- Main Sections -->
                 <?php if ($_SESSION['tipo'] === 'administrador'): ?>
+
                     <div class="menu-section">
                         <h2 class="section-title">Secciones Principales</h2>
                         <div class="menu-grid">
@@ -234,7 +211,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">156</div>
+                                    <!-- <div class="menu-count">156</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -250,7 +227,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">45</div>
+                                    <!-- <div class="menu-count">45</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -266,7 +243,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">24</div>
+                                    <!-- <div class="menu-count">24</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -282,7 +259,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">89</div>
+                                    <!-- <div class="menu-count">89</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -298,7 +275,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">32</div>
+                                    <!-- <div class="menu-count">32</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -314,7 +291,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">2,847</div>
+                                    <!-- <div class="menu-count">2,847</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -337,7 +314,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">1,234</div>
+                                    <!-- <div class="menu-count">1,234</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -353,7 +330,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">156</div>
+                                    <!-- <div class="menu-count">156</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -376,7 +353,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">12</div>
+                                    <!-- <div class="menu-count">12</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -392,7 +369,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">8</div>
+                                    <!-- <div class="menu-count">8</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -408,7 +385,7 @@ $mysqli->close();
                                     </div>
                                 </div>
                                 <div class="menu-card-footer">
-                                    <div class="menu-count">3</div>
+                                    <!-- <div class="menu-count">3</div> -->
                                     <button class="menu-btn">Ver más</button>
                                 </div>
                             </a>
@@ -417,7 +394,7 @@ $mysqli->close();
                 <?php endif; ?>
 
                 <!-- Recent Activity -->
-                <div class="activity-card">
+                <!-- <div class="activity-card">
                     <div class="activity-header">
                         <i data-lucide="bar-chart-3" style="width: 20px; height: 20px;"></i>
                         <h2>Actividad Reciente</h2>
@@ -454,7 +431,7 @@ $mysqli->close();
                             <div class="activity-time">Hace 1 hora</div>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
         </main>
     </div>

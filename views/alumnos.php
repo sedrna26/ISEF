@@ -38,14 +38,15 @@ $mensaje = '';
 $error = '';
 
 // Función para generar nombre de usuario único basado en nombre y apellido
-function generarUsername($nombre, $apellido, $mysqli_conn) {
+function generarUsername($nombre, $apellido, $mysqli_conn)
+{
     setlocale(LC_ALL, 'en_US.UTF-8');
     $nombre_norm = strtolower(trim($nombre));
     $apellido_norm = strtolower(trim($apellido));
-    
+
     $nombre_norm = preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nombre_norm));
     $apellido_norm = preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $apellido_norm));
-    
+
     $baseUsername = substr($nombre_norm, 0, 1) . $apellido_norm;
     if (empty($baseUsername)) { // En caso de nombres/apellidos muy cortos o con solo caracteres especiales
         $baseUsername = 'user';
@@ -57,13 +58,13 @@ function generarUsername($nombre, $apellido, $mysqli_conn) {
         if (!$stmt_check) { // Manejo de error en preparación de consulta
             error_log("Error al preparar la consulta de verificación de username: " . $mysqli_conn->error);
             // Fallback: generar un username aleatorio para evitar bucle infinito
-            return "user" . uniqid(); 
+            return "user" . uniqid();
         }
         $stmt_check->bind_param("s", $username);
         $stmt_check->execute();
         $result_check = $stmt_check->get_result();
         $stmt_check->close();
-        
+
         if ($result_check->num_rows === 0) {
             return $username;
         }
@@ -79,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($accion === 'crear') {
         $mysqli->begin_transaction();
         try {
-                 // --- Manejo de la foto ---
+            // --- Manejo de la foto ---
             $foto_url = null;
             if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
                 $fotoTmp = $_FILES['foto']['tmp_name'];
@@ -109,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $password_hash = password_hash($_POST['dni'], PASSWORD_DEFAULT);
             $tipo = 'alumno';
             $activo = 1; // Por defecto activo
-            
+
             $stmt_u = $mysqli->prepare("INSERT INTO usuario (username, password, tipo, activo, debe_cambiar_password) VALUES (?, ?, ?, ?, 0)"); // debe_cambiar_password = 0 (false) por defecto
             $stmt_u->bind_param("sssi", $username, $password_hash, $tipo, $activo);
             $stmt_u->execute();
@@ -126,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_a->bind_param("issi", $persona_id_new, $_POST['legajo'], $_POST['fecha_ingreso'], $_POST['cohorte']);
             $stmt_a->execute();
             $stmt_a->close();
-            
+
             $mysqli->commit();
             $_SESSION['mensaje_exito'] = "Alumno creado correctamente. Nombre de usuario: $username";
         } catch (Exception $e) {
@@ -136,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($accion === 'editar') {
         $mysqli->begin_transaction();
         try {
-                // --- Manejo de la foto (edición) ---
+            // --- Manejo de la foto (edición) ---
             $foto_url = null;
             $foto_actual = null;
 
@@ -189,13 +190,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Opcional: Actualizar estado activo/inactivo del usuario
             if (isset($_POST['activo'])) {
-                 $activo_user = $_POST['activo'] == '1' ? 1 : 0;
-                 $stmt_user_act = $mysqli->prepare("UPDATE usuario SET activo = ? WHERE id = (SELECT usuario_id FROM persona WHERE id = ?)");
-                 $stmt_user_act->bind_param("ii", $activo_user, $_POST['persona_id']);
-                 $stmt_user_act->execute();
-                 $stmt_user_act->close();
+                $activo_user = $_POST['activo'] == '1' ? 1 : 0;
+                $stmt_user_act = $mysqli->prepare("UPDATE usuario SET activo = ? WHERE id = (SELECT usuario_id FROM persona WHERE id = ?)");
+                $stmt_user_act->bind_param("ii", $activo_user, $_POST['persona_id']);
+                $stmt_user_act->execute();
+                $stmt_user_act->close();
             }
-            
+
             $mysqli->commit();
             $_SESSION['mensaje_exito'] = "Alumno actualizado correctamente.";
         } catch (Exception $e) {
@@ -227,15 +228,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt_del_p->bind_param("i", $_POST['persona_id_eliminar']);
                 $stmt_del_p->execute();
                 $stmt_del_p->close();
-                
+
                 $stmt_del_u = $mysqli->prepare("DELETE FROM usuario WHERE id = ?");
                 $stmt_del_u->bind_param("i", $usuario_id_del);
                 $stmt_del_u->execute();
                 $stmt_del_u->close();
             } else {
-                 throw new Exception("No se encontró el usuario asociado a la persona.");
+                throw new Exception("No se encontró el usuario asociado a la persona.");
             }
-            
+
             $mysqli->commit();
             $_SESSION['mensaje_exito'] = "Alumno eliminado correctamente.";
         } catch (Exception $e) {
@@ -243,7 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['mensaje_error'] = "Error al eliminar el alumno: " . $e->getMessage();
         }
     }
-    
+
     header("Location: alumnos.php");
     exit;
 }
@@ -302,6 +303,7 @@ if ($resultado_alumnos) {
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -314,7 +316,7 @@ if ($resultado_alumnos) {
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: url('fondo.png') no-repeat center center fixed;
@@ -323,7 +325,7 @@ if ($resultado_alumnos) {
             line-height: 1.6;
             position: relative;
         }
-        
+
         body::after {
             content: '';
             position: fixed;
@@ -335,7 +337,7 @@ if ($resultado_alumnos) {
             z-index: -1;
             pointer-events: none;
         }
-        
+
         /* Paleta de colores naranja */
         :root {
             --orange-primary: rgba(230, 92, 0, 0.9);
@@ -349,12 +351,12 @@ if ($resultado_alumnos) {
             --gray-medium: rgba(224, 224, 224, 0.6);
             --gray-dark: rgba(51, 51, 51, 0.9);
         }
-        
+
         .app-container {
             display: flex;
             min-height: 100vh;
         }
-        
+
         /* Sidebar Styles */
         .sidebar {
             width: 280px;
@@ -371,12 +373,12 @@ if ($resultado_alumnos) {
             transition: all 0.3s ease;
             z-index: 10;
         }
-        
+
         .sidebar-header {
             padding: 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .sidebar-brand {
             display: flex;
             align-items: center;
@@ -384,7 +386,7 @@ if ($resultado_alumnos) {
             text-decoration: none;
             color: inherit;
         }
-        
+
         .brand-icon {
             width: 32px;
             height: 32px;
@@ -395,29 +397,29 @@ if ($resultado_alumnos) {
             align-items: center;
             justify-content: center;
         }
-        
+
         .brand-text h1 {
             font-size: 1rem;
             font-weight: 600;
             margin: 0;
             color: var(--white);
         }
-        
+
         .brand-text p {
             font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.8);
             margin: 0;
         }
-        
+
         .sidebar-nav {
             flex: 1;
             padding: 1rem;
         }
-        
+
         .nav-section {
             margin-bottom: 2rem;
         }
-        
+
         .nav-label {
             font-size: 0.75rem;
             font-weight: 600;
@@ -427,15 +429,15 @@ if ($resultado_alumnos) {
             margin-bottom: 0.5rem;
             padding: 0 0.75rem;
         }
-        
+
         .nav-menu {
             list-style: none;
         }
-        
+
         .nav-item {
             margin-bottom: 0.25rem;
         }
-        
+
         .nav-link {
             display: flex;
             align-items: center;
@@ -447,28 +449,28 @@ if ($resultado_alumnos) {
             transition: all 0.3s;
             font-size: 0.875rem;
         }
-        
+
         .nav-link:hover {
             background: rgba(255, 255, 255, 0.15);
             color: var(--white);
         }
-        
+
         .nav-link.active {
             background: var(--white);
             color: var(--orange-primary);
             font-weight: 500;
         }
-        
+
         .nav-icon {
             width: 16px;
             height: 16px;
         }
-        
+
         .sidebar-footer {
             padding: 1rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .user-info {
             display: flex;
             align-items: center;
@@ -479,11 +481,11 @@ if ($resultado_alumnos) {
             margin-bottom: 0.5rem;
             transition: all 0.3s;
         }
-        
+
         .user-info:hover {
             background: rgba(255, 255, 255, 0.2);
         }
-        
+
         .user-avatar {
             width: 32px;
             height: 32px;
@@ -496,20 +498,20 @@ if ($resultado_alumnos) {
             font-weight: 600;
             font-size: 0.875rem;
         }
-        
+
         .user-details h3 {
             font-size: 0.875rem;
             font-weight: 500;
             margin: 0;
             color: var(--white);
         }
-        
+
         .user-details p {
             font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.8);
             margin: 0;
         }
-        
+
         .logout-btn {
             display: flex;
             align-items: center;
@@ -525,11 +527,11 @@ if ($resultado_alumnos) {
             width: 100%;
             cursor: pointer;
         }
-        
+
         .logout-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
-        
+
         /* Main Content */
         .main-content {
             flex: 1;
@@ -538,7 +540,7 @@ if ($resultado_alumnos) {
             min-height: 100vh;
             background: transparent;
         }
-        
+
         .header {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(8px);
@@ -552,11 +554,11 @@ if ($resultado_alumnos) {
             z-index: 5;
             transition: all 0.3s;
         }
-        
+
         .header:hover {
             background: rgba(255, 255, 255, 0.85);
         }
-        
+
         .sidebar-toggle {
             display: none;
             background: none;
@@ -566,29 +568,28 @@ if ($resultado_alumnos) {
             border-radius: 4px;
             color: var(--orange-primary);
         }
-        
+
         .sidebar-toggle:hover {
             background: var(--orange-lightest);
         }
-        
+
         .breadcrumb {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--gray-dark);
+            font-size: 0.95rem;
+            color: #888;
         }
-        
+
         .breadcrumb a {
-            color: inherit;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        
-        .breadcrumb a:hover {
             color: var(--orange-primary);
+            text-decoration: none;
         }
-        
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
         .content {
             flex: 1;
             padding: 1.5rem;
@@ -598,28 +599,28 @@ if ($resultado_alumnos) {
             position: relative;
             z-index: 1;
         }
-        
+
         .page-header {
             margin-bottom: 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .page-title {
             font-size: 1.75rem;
             font-weight: 700;
             color: var(--gray-dark);
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        
+
         .page-subtitle {
             color: var(--gray-dark);
             opacity: 0.9;
             font-size: 1rem;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
-        
+
         /* Mensajes */
         .message-toast {
             padding: 1rem;
@@ -627,21 +628,21 @@ if ($resultado_alumnos) {
             border-radius: 6px;
             border: 1px solid transparent;
         }
-        
+
         .message-toast.success {
             background-color: rgba(220, 252, 231, 0.8);
             color: #166534;
             border-color: rgba(187, 247, 208, 0.6);
             backdrop-filter: blur(2px);
         }
-        
+
         .message-toast.error {
             background-color: rgba(254, 226, 226, 0.8);
             color: #991b1b;
             border-color: rgba(254, 202, 202, 0.6);
             backdrop-filter: blur(2px);
         }
-        
+
         /* Cards */
         .card {
             background: rgba(255, 255, 255, 0.7);
@@ -651,52 +652,52 @@ if ($resultado_alumnos) {
             margin-bottom: 1.5rem;
             transition: all 0.3s;
         }
-        
+
         .card:hover {
             background: rgba(255, 255, 255, 0.85);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        
+
         .card-header {
             padding: 1rem 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
         }
-        
+
         .card-title {
             font-size: 1.125rem;
             font-weight: 600;
             color: var(--gray-dark);
         }
-        
+
         .card-description {
             font-size: 0.875rem;
             color: var(--gray-dark);
             opacity: 0.8;
             margin-top: 0.25rem;
         }
-        
+
         .card-content {
             padding: 1.5rem;
         }
-        
+
         .card-footer {
             padding: 1rem 1.5rem;
             border-top: 1px solid rgba(255, 255, 255, 0.3);
             background-color: rgba(255, 255, 255, 0.5);
             text-align: right;
         }
-        
+
         /* Formularios */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
         }
-        
+
         .form-group {
             margin-bottom: 1rem;
         }
-        
+
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
@@ -704,7 +705,7 @@ if ($resultado_alumnos) {
             font-size: 0.875rem;
             color: var(--gray-dark);
         }
-        
+
         .form-group input[type="text"],
         .form-group input[type="date"],
         .form-group input[type="number"],
@@ -720,7 +721,7 @@ if ($resultado_alumnos) {
             background-color: var(--white);
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-        
+
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
@@ -728,11 +729,11 @@ if ($resultado_alumnos) {
             outline: none;
             box-shadow: 0 0 0 1px var(--orange-primary);
         }
-        
+
         .form-group textarea {
             min-height: 80px;
         }
-        
+
         /* Botones */
         .btn {
             display: inline-flex;
@@ -748,62 +749,62 @@ if ($resultado_alumnos) {
             text-decoration: none;
             white-space: nowrap;
         }
-        
+
         .btn i {
             margin-right: 0.5rem;
             width: 16px;
             height: 16px;
         }
-        
+
         .btn-primary {
             background-color: var(--orange-primary);
             color: white;
         }
-        
+
         .btn-primary:hover {
             background-color: rgba(230, 92, 0, 1);
         }
-        
+
         .btn-secondary {
             background-color: var(--gray-light);
             color: var(--gray-dark);
             border-color: var(--gray-medium);
         }
-        
+
         .btn-secondary:hover {
             background-color: var(--gray-medium);
         }
-        
+
         .btn-danger {
             background-color: #dc2626;
             color: white;
         }
-        
+
         .btn-danger:hover {
             background-color: #b91c1c;
         }
-        
+
         .btn-outline {
             background-color: transparent;
             color: var(--gray-dark);
             border: 1px solid var(--gray-medium);
         }
-        
+
         .btn-outline:hover {
             background-color: var(--white-70);
         }
-        
+
         .btn-sm {
             padding: 0.375rem 0.75rem;
             font-size: 0.75rem;
         }
-        
+
         .btn-sm i {
             margin-right: 0.25rem;
             width: 14px;
             height: 14px;
         }
-        
+
         /* Tablas */
         .table-container {
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -812,12 +813,12 @@ if ($resultado_alumnos) {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(5px);
         }
-        
+
         .styled-table {
             width: 100%;
             border-collapse: collapse;
         }
-        
+
         .styled-table th,
         .styled-table td {
             padding: 0.75rem 1rem;
@@ -825,27 +826,27 @@ if ($resultado_alumnos) {
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
             font-size: 0.875rem;
         }
-        
+
         .styled-table th {
             background-color: rgba(255, 255, 255, 0.5);
             color: var(--gray-dark);
             font-weight: 600;
         }
-        
+
         .styled-table tr:last-child td {
             border-bottom: none;
         }
-        
+
         .styled-table tr:hover {
             background-color: rgba(255, 255, 255, 0.5);
         }
-        
+
         .table-actions {
             display: flex;
             gap: 0.5rem;
             justify-content: flex-end;
         }
-        
+
         /* Badges */
         .badge {
             display: inline-flex;
@@ -855,23 +856,23 @@ if ($resultado_alumnos) {
             font-weight: 500;
             border-radius: 9999px;
         }
-        
+
         .badge i {
             width: 12px;
             height: 12px;
             margin-right: 0.25rem;
         }
-        
+
         .badge-success {
             background-color: rgba(220, 252, 231, 0.8);
             color: #15803d;
         }
-        
+
         .badge-danger {
             background-color: rgba(254, 226, 226, 0.8);
             color: #b91c1c;
         }
-        
+
         /* Modal */
         .modal-content {
             background: rgba(255, 255, 255, 0.9);
@@ -882,7 +883,7 @@ if ($resultado_alumnos) {
             overflow-y: auto;
             backdrop-filter: blur(5px);
         }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -891,34 +892,34 @@ if ($resultado_alumnos) {
                 transition: left 0.3s;
                 z-index: 1000;
             }
-            
+
             .sidebar.open {
                 left: 0;
             }
-            
+
             .sidebar-toggle {
                 display: block;
             }
-            
+
             .content {
                 padding: 1rem;
             }
-            
+
             .page-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 0.5rem;
             }
-            
+
             .form-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .modal-content {
                 max-width: calc(100% - 2rem);
             }
         }
-        
+
         .overlay {
             display: none;
             position: fixed;
@@ -929,23 +930,18 @@ if ($resultado_alumnos) {
             background: rgba(0, 0, 0, 0.5);
             z-index: 999;
         }
-        
+
         .overlay.show {
             display: block;
         }
     </style>
-</head>
-<body>
-    <!-- [El resto del HTML permanece exactamente igual] -->
-</body>
-</html>
-</head>
+
 <body>
     <div class="app-container">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="dashboard.php" class="sidebar-brand">
-                    <div class="brand-icon"><i data-lucide="school"></i></div>
+                    <img src="../sources/logo_recortado.png" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
                     <div class="brand-text">
                         <h1>Sistema de Gestión ISEF</h1>
                         <p>Instituto Superior</p>
@@ -965,39 +961,39 @@ if ($resultado_alumnos) {
                             <li class="nav-item"><a href="cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
                             <li class="nav-item"><a href="auditoria.php" class="nav-link"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
                         <?php endif; ?>
-                         <?php if ($_SESSION['tipo'] === 'profesor' || $_SESSION['tipo'] === 'preceptor'): ?>
-                        <li class="nav-item">
-                            <a href="asistencias.php" class="nav-link">
-                                <i data-lucide="user-check" class="nav-icon"></i>
-                                <span>Asistencias</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="evaluaciones.php" class="nav-link">
-                                <i data-lucide="clipboard-check" class="nav-icon"></i>
-                                <span>Evaluaciones</span>
-                            </a>
-                        </li>
+                        <?php if ($_SESSION['tipo'] === 'profesor' || $_SESSION['tipo'] === 'preceptor'): ?>
+                            <li class="nav-item">
+                                <a href="asistencias.php" class="nav-link">
+                                    <i data-lucide="user-check" class="nav-icon"></i>
+                                    <span>Asistencias</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="evaluaciones.php" class="nav-link">
+                                    <i data-lucide="clipboard-check" class="nav-icon"></i>
+                                    <span>Evaluaciones</span>
+                                </a>
+                            </li>
                         <?php endif; ?>
                         <?php if ($_SESSION['tipo'] === 'alumno'): ?>
-                        <li class="nav-item">
-                            <a href="inscripciones.php" class="nav-link">
-                                <i data-lucide="user-plus" class="nav-icon"></i>
-                                <span>Inscripciones</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="situacion.php" class="nav-link">
-                                <i data-lucide="bar-chart-3" class="nav-icon"></i>
-                                <span>Situación Académica</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="certificados.php" class="nav-link">
-                                <i data-lucide="file-text" class="nav-icon"></i>
-                                <span>Certificados</span>
-                            </a>
-                        </li>
+                            <li class="nav-item">
+                                <a href="inscripciones.php" class="nav-link">
+                                    <i data-lucide="user-plus" class="nav-icon"></i>
+                                    <span>Inscripciones</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="situacion.php" class="nav-link">
+                                    <i data-lucide="bar-chart-3" class="nav-icon"></i>
+                                    <span>Situación Académica</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="certificados.php" class="nav-link">
+                                    <i data-lucide="file-text" class="nav-icon"></i>
+                                    <span>Certificados</span>
+                                </a>
+                            </li>
                         <?php endif; ?>
                     </ul>
                 </div>
@@ -1028,11 +1024,7 @@ if ($resultado_alumnos) {
                     <span>/</span>
                     <span>Alumnos</span>
                 </nav>
-                <div class="header-actions">
-                    <button class="icon-btn" title="Notificaciones">
-                        <i data-lucide="bell"></i>
-                    </button>
-                    </div>
+
             </header>
 
             <div class="content">
@@ -1054,7 +1046,8 @@ if ($resultado_alumnos) {
                     <div class="message-toast error" role="alert"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
-                <div class="card" id="creacionFormCard" style="display:none;"> <div class="card-header">
+                <div class="card" id="creacionFormCard" style="display:none;">
+                    <div class="card-header">
                         <h2 class="card-title">Registrar Nuevo Alumno</h2>
                         <p class="card-description">Completa los datos para agregar un nuevo estudiante.</p>
                     </div>
@@ -1100,7 +1093,7 @@ if ($resultado_alumnos) {
                                 </div>
                                 <div class="form-group">
                                     <label for="cohorte">Cohorte (Año):</label>
-                                    <input type="number" id="cohorte" name="cohorte" required min="1900" max="<?= date('Y')+1 ?>">
+                                    <input type="number" id="cohorte" name="cohorte" required min="1900" max="<?= date('Y') + 1 ?>">
                                 </div>
                             </div>
                         </div>
@@ -1110,9 +1103,9 @@ if ($resultado_alumnos) {
                         </div>
                     </form>
                 </div>
-                
 
-               <div class="card">
+
+                <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Lista de Alumnos Registrados</h2>
                         <p class="card-description">Visualiza y gestiona los alumnos existentes.</p>
@@ -1137,90 +1130,91 @@ if ($resultado_alumnos) {
                                 <tbody>
                                     <?php if (empty($lista_alumnos)): ?>
                                         <tr id="noAlumnosRow">
-                                            <td colspan="7" style="text-align:center; padding: 2rem;">No hay alumnos registrados.</td> 
+                                            <td colspan="7" style="text-align:center; padding: 2rem;">No hay alumnos registrados.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($lista_alumnos as $alu): ?>
-                                        <tr>
-                                            <td><?= htmlspecialchars($alu['legajo']) ?></td>
-                                            <td><?= htmlspecialchars($alu['apellidos']) ?>, <?= htmlspecialchars($alu['nombres']) ?></td>
-                                            <td><?= htmlspecialchars($alu['dni']) ?></td>
-                                            <td><?= htmlspecialchars($alu['cohorte']) ?></td> 
-                                            <td><?= htmlspecialchars($alu['username']) ?></td> 
-                                            <td>
-                                                <?php if ($alu['activo']): ?> 
-                                                    <span class="badge badge-success"><i data-lucide="user-check"></i>Activo</span> 
-                                                <?php else: ?>
-                                                    <span class="badge badge-danger"><i data-lucide="user-x"></i>Inactivo</span> 
-                                                <?php endif; ?>
-                                            </td>
-                                           <td class="table-actions">
-                                                <button class="btn btn-outline btn-sm" onclick='mostrarVerAlumno(<?= htmlspecialchars(json_encode($alu), ENT_QUOTES, 'UTF-8') ?>)' title="Ver Alumno">
-                                                    <i data-lucide="eye"></i>
-                                                </button>
-                                                <button class="btn btn-outline btn-sm" onclick='cargarDatosEdicion(<?= htmlspecialchars(json_encode($alu), ENT_QUOTES, 'UTF-8') ?>)' title="Editar Alumno"> 
-                                                    <i data-lucide="edit-2"></i>
-                                                </button>
-                                                <form method="post" style="display:inline;" onsubmit="return confirm('¿Está seguro de eliminar este alumno?\nEsta acción no se puede deshacer.');">
-                                                    <input type="hidden" name="accion" value="eliminar">
-                                                    <input type="hidden" name="persona_id_eliminar" value="<?= $alu['persona_id'] ?>"> 
-                                                    <button type="submit" class="btn btn-outline btn-danger-outline btn-sm" title="Eliminar Alumno">
-                                                        <i data-lucide="trash-2"></i> 
+                                            <tr>
+                                                <td><?= htmlspecialchars($alu['legajo']) ?></td>
+                                                <td><?= htmlspecialchars($alu['apellidos']) ?>, <?= htmlspecialchars($alu['nombres']) ?></td>
+                                                <td><?= htmlspecialchars($alu['dni']) ?></td>
+                                                <td><?= htmlspecialchars($alu['cohorte']) ?></td>
+                                                <td><?= htmlspecialchars($alu['username']) ?></td>
+                                                <td>
+                                                    <?php if ($alu['activo']): ?>
+                                                        <span class="badge badge-success"><i data-lucide="user-check"></i>Activo</span>
+                                                    <?php else: ?>
+                                                        <span class="badge badge-danger"><i data-lucide="user-x"></i>Inactivo</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="table-actions">
+                                                    <button class="btn btn-outline btn-sm" onclick='mostrarVerAlumno(<?= htmlspecialchars(json_encode($alu), ENT_QUOTES, 'UTF-8') ?>)' title="Ver Alumno">
+                                                        <i data-lucide="eye"></i>
                                                     </button>
-                                                </form>
-                                            </td>
-                                        </tr>
+                                                    <button class="btn btn-outline btn-sm" onclick='cargarDatosEdicion(<?= htmlspecialchars(json_encode($alu), ENT_QUOTES, 'UTF-8') ?>)' title="Editar Alumno">
+                                                        <i data-lucide="edit-2"></i>
+                                                    </button>
+                                                    <form method="post" style="display:inline;" onsubmit="return confirm('¿Está seguro de eliminar este alumno?\nEsta acción no se puede deshacer.');">
+                                                        <input type="hidden" name="accion" value="eliminar">
+                                                        <input type="hidden" name="persona_id_eliminar" value="<?= $alu['persona_id'] ?>">
+                                                        <button type="submit" class="btn btn-outline btn-danger-outline btn-sm" title="Eliminar Alumno">
+                                                            <i data-lucide="trash-2"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
                                         <?php endforeach; ?>
                                     <?php endif; ?>
-                                    
+
                                     <tr id="noResultsSearchRow" style="display: none;">
                                         <td colspan="7" style="text-align:center; padding: 2rem;">No se encontraron alumnos que coincidan con la búsqueda.</td>
                                     </tr>
-                            
+
                                 </tbody>
                             </table>
                         </div>
-                    </div> 
+                    </div>
                 </div>
-           <div id="edicionFormContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
-        <div class="modal-content card"> <div class="card-header">
-                <h2 class="card-title">Editar Alumno</h2>
-                <p class="card-description">Modifica la información del estudiante seleccionado.</p>
-            </div>
-            <form method="post" id="form-editar">
-                 <input type="hidden" name="accion" value="editar">
-                 <input type="hidden" name="persona_id" id="edit-persona-id">
-                <div class="card-content">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="edit-apellidos">Apellidos:</label>
-                            <input type="text" id="edit-apellidos" name="apellidos" required>
+                <div id="edicionFormContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+                    <div class="modal-content card">
+                        <div class="card-header">
+                            <h2 class="card-title">Editar Alumno</h2>
+                            <p class="card-description">Modifica la información del estudiante seleccionado.</p>
                         </div>
-                        <div class="form-group">
-                            <label for="edit-nombres">Nombres:</label>
-                            <input type="text" id="edit-nombres" name="nombres" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-dni">DNI:</label>
-                            <input type="text" id="edit-dni" name="dni" required pattern="\d{7,8}" title="DNI debe ser 7 u 8 dígitos numéricos.">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-fecha-nacimiento">Fecha de nacimiento:</label>
-                            <input type="date" id="edit-fecha-nacimiento" name="fecha_nacimiento" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-celular">Celular:</label>
-                            <input type="text" id="edit-celular" name="celular">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-domicilio">Domicilio:</label>
-                            <input type="text" id="edit-domicilio" name="domicilio">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-contacto-emergencia">Contacto de emergencia (Teléfono):</label>
-                            <input type="text" id="edit-contacto-emergencia" name="contacto_emergencia">
-                        </div>
-                            <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
+                        <form method="post" id="form-editar">
+                            <input type="hidden" name="accion" value="editar">
+                            <input type="hidden" name="persona_id" id="edit-persona-id">
+                            <div class="card-content">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="edit-apellidos">Apellidos:</label>
+                                        <input type="text" id="edit-apellidos" name="apellidos" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-nombres">Nombres:</label>
+                                        <input type="text" id="edit-nombres" name="nombres" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-dni">DNI:</label>
+                                        <input type="text" id="edit-dni" name="dni" required pattern="\d{7,8}" title="DNI debe ser 7 u 8 dígitos numéricos.">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-fecha-nacimiento">Fecha de nacimiento:</label>
+                                        <input type="date" id="edit-fecha-nacimiento" name="fecha_nacimiento" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-celular">Celular:</label>
+                                        <input type="text" id="edit-celular" name="celular">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-domicilio">Domicilio:</label>
+                                        <input type="text" id="edit-domicilio" name="domicilio">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-contacto-emergencia">Contacto de emergencia (Teléfono):</label>
+                                        <input type="text" id="edit-contacto-emergencia" name="contacto_emergencia">
+                                    </div>
+                                    <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
                                         <label style="display: block; margin-bottom: 0.5rem;">Foto actual:</label>
                                         <div id="edit-profesor-foto-actual" style="margin-bottom: 0.5rem;">
                                             <span style="color:#64748b;">Sin foto</span>
@@ -1242,300 +1236,307 @@ if ($resultado_alumnos) {
                                             }
                                         }
                                     </script>
-                                    
-                        <div class="form-group">
 
-                            <label for="edit-legajo">Legajo:</label>
-                            <input type="text" id="edit-legajo" name="legajo" required>
+                                    <div class="form-group">
+
+                                        <label for="edit-legajo">Legajo:</label>
+                                        <input type="text" id="edit-legajo" name="legajo" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-fecha-ingreso">Fecha de ingreso:</label>
+                                        <input type="date" id="edit-fecha-ingreso" name="fecha_ingreso" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-cohorte">Cohorte (Año):</label>
+                                        <input type="number" id="edit-cohorte" name="cohorte" required min="1900" max="<?= date('Y') + 1 ?>">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="edit-activo">Estado del Usuario:</label>
+                                        <select id="edit-activo" name="activo">
+                                            <option value="1">Activo</option>
+                                            <option value="0">Inactivo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <button type="button" class="btn btn-secondary" onclick="ocultarFormEdicion()">Cancelar</button>
+                                <button type="submit" class="btn btn-primary" style="margin-left:0.5rem;"><i data-lucide="save"></i>Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div id="verAlumnoContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+                    <div class="modal-content card">
+                        <div class="card-header">
+                            <h2 class="card-title">Datos del Alumno</h2>
+                            <p class="card-description">Visualización de la información del estudiante.</p>
                         </div>
-                        <div class="form-group">
-                            <label for="edit-fecha-ingreso">Fecha de ingreso:</label>
-                            <input type="date" id="edit-fecha-ingreso" name="fecha_ingreso" required>
+                        <div class="card-content">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Apellidos:</label>
+                                    <input type="text" id="ver-apellidos" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nombres:</label>
+                                    <input type="text" id="ver-nombres" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>DNI:</label>
+                                    <input type="text" id="ver-dni" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Fecha de nacimiento:</label>
+                                    <input type="text" id="ver-fecha-nacimiento" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Celular:</label>
+                                    <input type="text" id="ver-celular" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Domicilio:</label>
+                                    <input type="text" id="ver-domicilio" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Contacto de emergencia:</label>
+                                    <input type="text" id="ver-contacto-emergencia" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Legajo:</label>
+                                    <input type="text" id="ver-legajo" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Fecha de ingreso:</label>
+                                    <input type="text" id="ver-fecha-ingreso" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Cohorte:</label>
+                                    <input type="text" id="ver-cohorte" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Usuario:</label>
+                                    <input type="text" id="ver-username" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Estado:</label>
+                                    <input type="text" id="ver-estado" readonly>
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
+                                    <label>Foto:</label>
+                                    <div id="ver-foto-alumno" style="margin-top: 0.5rem;">
+                                        <span style="color:#64748b;">Sin foto</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="edit-cohorte">Cohorte (Año):</label>
-                            <input type="number" id="edit-cohorte" name="cohorte" required min="1900" max="<?= date('Y')+1 ?>">
-                        </div>
-                         <div class="form-group">
-                            <label for="edit-activo">Estado del Usuario:</label>
-                            <select id="edit-activo" name="activo">
-                                <option value="1">Activo</option>
-                                <option value="0">Inactivo</option>
-                            </select>
+                        <div class="card-footer">
+                            <button type="button" class="btn btn-secondary" onclick="ocultarVerAlumno()">Cerrar</button>
                         </div>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <button type="button" class="btn btn-secondary" onclick="ocultarFormEdicion()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" style="margin-left:0.5rem;"><i data-lucide="save"></i>Guardar Cambios</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div id="verAlumnoContainer" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
-    <div class="modal-content card">
-        <div class="card-header">
-            <h2 class="card-title">Datos del Alumno</h2>
-            <p class="card-description">Visualización de la información del estudiante.</p>
-        </div>
-        <div class="card-content">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Apellidos:</label>
-                    <input type="text" id="ver-apellidos" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Nombres:</label>
-                    <input type="text" id="ver-nombres" readonly>
-                </div>
-                <div class="form-group">
-                    <label>DNI:</label>
-                    <input type="text" id="ver-dni" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Fecha de nacimiento:</label>
-                    <input type="text" id="ver-fecha-nacimiento" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Celular:</label>
-                    <input type="text" id="ver-celular" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Domicilio:</label>
-                    <input type="text" id="ver-domicilio" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Contacto de emergencia:</label>
-                    <input type="text" id="ver-contacto-emergencia" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Legajo:</label>
-                    <input type="text" id="ver-legajo" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Fecha de ingreso:</label>
-                    <input type="text" id="ver-fecha-ingreso" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Cohorte:</label>
-                    <input type="text" id="ver-cohorte" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Usuario:</label>
-                    <input type="text" id="ver-username" readonly>
-                </div>
-                <div class="form-group">
-                    <label>Estado:</label>
-                    <input type="text" id="ver-estado" readonly>
-                </div>
-                <div class="form-group" style="grid-column: 1 / -1; text-align: center;">
-                    <label>Foto:</label>
-                    <div id="ver-foto-alumno" style="margin-top: 0.5rem;">
-                        <span style="color:#64748b;">Sin foto</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-footer">
-            <button type="button" class="btn btn-secondary" onclick="ocultarVerAlumno()">Cerrar</button>
-        </div>
-    </div>
-</div>
 
-    <script>
-        lucide.createIcons();
+                <script>
+                    lucide.createIcons();
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('show');
-        }
-
-        function closeSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            sidebar.classList.remove('open');
-            overlay.classList.remove('show');
-        }
-        
-        window.addEventListener('resize', () => {
-            if (window.innerWidth > 768) {
-                closeSidebar();
-            }
-        });
-
-        function confirmLogout() {
-            if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
-                window.location.href = '../index.php?logout=1'; // Ajusta la ruta si es necesario
-            }
-        }
-        function filterTable() {
-            const input = document.getElementById("searchInput");
-            const filter = input.value.toLowerCase();
-            const table = document.querySelector(".styled-table");
-            const tbody = table.getElementsByTagName("tbody")[0];
-            const tr = tbody.getElementsByTagName("tr");
-            let foundMatch = false;
-
-            const noAlumnosRow = document.getElementById('noAlumnosRow');
-            const noResultsSearchRow = document.getElementById('noResultsSearchRow');
-
-            // Hide specific message rows initially during filtering
-            if (noAlumnosRow) noAlumnosRow.style.display = 'none';
-            if (noResultsSearchRow) noResultsSearchRow.style.display = 'none';
-
-            for (let i = 0; i < tr.length; i++) {
-                let row = tr[i];
-
-                // Skip the predefined message rows from the filtering logic itself
-                if (row.id === 'noAlumnosRow' || row.id === 'noResultsSearchRow') {
-                    continue;
-                }
-
-                let displayRow = false;
-                // Ensure cells exist before trying to access textContent
-                const legajoTd = row.cells[0];
-                const nombreCompletoTd = row.cells[1];
-                const dniTd = row.cells[2];
-                // You can also add other cells like cohorte (row.cells[3]) or username (row.cells[4]) if needed
-
-                if (legajoTd && nombreCompletoTd && dniTd) {
-                    const legajoText = legajoTd.textContent || legajoTd.innerText;
-                    const nombreCompletoText = nombreCompletoTd.textContent || nombreCompletoTd.innerText;
-                    const dniText = dniTd.textContent || dniTd.innerText;
-
-                    if (legajoText.toLowerCase().indexOf(filter) > -1 ||
-                        nombreCompletoText.toLowerCase().indexOf(filter) > -1 ||
-                        dniText.toLowerCase().indexOf(filter) > -1) {
-                        displayRow = true;
-                        foundMatch = true;
+                    function toggleSidebar() {
+                        const sidebar = document.getElementById('sidebar');
+                        const overlay = document.getElementById('overlay');
+                        sidebar.classList.toggle('open');
+                        overlay.classList.toggle('show');
                     }
-                }
-                row.style.display = displayRow ? "" : "none";
-            }
 
-            // Logic to display the correct "no results" message
-            const isListaAlumnosEmpty = <?php echo empty($lista_alumnos) ? 'true' : 'false'; ?>;
+                    function closeSidebar() {
+                        const sidebar = document.getElementById('sidebar');
+                        const overlay = document.getElementById('overlay');
+                        sidebar.classList.remove('open');
+                        overlay.classList.remove('show');
+                    }
 
-            if (filter === "") { // Search is cleared
-                if (isListaAlumnosEmpty && noAlumnosRow) {
-                    noAlumnosRow.style.display = ''; // Show "No hay alumnos registrados"
-                }
-                if (noResultsSearchRow) {
-                     noResultsSearchRow.style.display = 'none'; // Hide "No se encontraron..."
-                }
-                // All actual data rows were already set to display="" if they exist
-            } else { // Search has text
-                if (!foundMatch && noResultsSearchRow) {
-                    noResultsSearchRow.style.display = ''; // Show "No se encontraron alumnos que coincidan..."
-                }
-                if (noAlumnosRow){
-                    noAlumnosRow.style.display = 'none'; // Hide "No hay alumnos" (if it was somehow visible)
-                }
-            }
-        }
+                    window.addEventListener('resize', () => {
+                        if (window.innerWidth > 768) {
+                            closeSidebar();
+                        }
+                    });
 
-        const creacionFormCard = document.getElementById('creacionFormCard');
-        function mostrarFormCreacion() {
-            creacionFormCard.style.display = 'block';
-            creacionFormCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        function ocultarFormCreacion() {
-            creacionFormCard.style.display = 'none';
-        }
-        
-        const edicionFormContainer = document.getElementById('edicionFormContainer');
-        
-        // Asegurarse de que esté oculto al cargar la página
-        if (edicionFormContainer) {
-            edicionFormContainer.style.display = 'none';
-        }
+                    function confirmLogout() {
+                        if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+                            window.location.href = '../index.php?logout=1'; // Ajusta la ruta si es necesario
+                        }
+                    }
 
-        function cargarDatosEdicion(alumno) {
-            document.getElementById('edit-persona-id').value = alumno.persona_id;
-            document.getElementById('edit-apellidos').value = alumno.apellidos;
-            document.getElementById('edit-nombres').value = alumno.nombres;
-            document.getElementById('edit-dni').value = alumno.dni;
-            document.getElementById('edit-fecha-nacimiento').value = alumno.fecha_nacimiento;
-            document.getElementById('edit-celular').value = alumno.celular || '';
-            document.getElementById('edit-domicilio').value = alumno.domicilio || '';
-            document.getElementById('edit-contacto-emergencia').value = alumno.contacto_emergencia || '';
-            document.getElementById('edit-legajo').value = alumno.legajo;
-            document.getElementById('edit-fecha-ingreso').value = alumno.fecha_ingreso;
-            document.getElementById('edit-cohorte').value = alumno.cohorte;
-            document.getElementById('edit-activo').value = alumno.activo == '1' ? '1' : '0';
+                    function filterTable() {
+                        const input = document.getElementById("searchInput");
+                        const filter = input.value.toLowerCase();
+                        const table = document.querySelector(".styled-table");
+                        const tbody = table.getElementsByTagName("tbody")[0];
+                        const tr = tbody.getElementsByTagName("tr");
+                        let foundMatch = false;
 
-            if (edicionFormContainer) {
-                edicionFormContainer.style.display = 'flex'; // Cambiar a flex para mostrarlo y centrarlo
-            }
-            
-            // Opcional: si el contenido del modal es muy largo, hacer scroll a su inicio
-            const modalContent = edicionFormContainer.querySelector('.modal-content');
-            if (modalContent) {
-                modalContent.scrollTop = 0; 
-            }
-        }
-        
-        function ocultarFormEdicion() {
-            if (edicionFormContainer) {
-                edicionFormContainer.style.display = 'none';
-            }
-        }
+                        const noAlumnosRow = document.getElementById('noAlumnosRow');
+                        const noResultsSearchRow = document.getElementById('noResultsSearchRow');
 
-        // Cerrar modal de edición si se hace clic fuera del contenido del modal (en el overlay)
-        if (edicionFormContainer) {
-            edicionFormContainer.addEventListener('click', function(event) {
-                if (event.target === edicionFormContainer) { // Si el clic fue directamente en el overlay
-                    ocultarFormEdicion();
-                }
-            });
-        }
-        
-        const verAlumnoContainer = document.getElementById('verAlumnoContainer');
-        function mostrarVerAlumno(datosAlumno) {
-            document.getElementById('ver-apellidos').value = datosAlumno.apellidos;
-            document.getElementById('ver-nombres').value = datosAlumno.nombres;
-            document.getElementById('ver-dni').value = datosAlumno.dni;
-            document.getElementById('ver-fecha-nacimiento').value = datosAlumno.fecha_nacimiento;
-            document.getElementById('ver-celular').value = datosAlumno.celular || '';
-            document.getElementById('ver-domicilio').value = datosAlumno.domicilio || '';
-            document.getElementById('ver-contacto-emergencia').value = datosAlumno.contacto_emergencia || '';
-            document.getElementById('ver-legajo').value = datosAlumno.legajo;
-            document.getElementById('ver-fecha-ingreso').value = datosAlumno.fecha_ingreso;
-            document.getElementById('ver-cohorte').value = datosAlumno.cohorte;
-            document.getElementById('ver-username').value = datosAlumno.username;
-            document.getElementById('ver-estado').value = datosAlumno.activo == '1' ? 'Activo' : 'Inactivo';
+                        // Hide specific message rows initially during filtering
+                        if (noAlumnosRow) noAlumnosRow.style.display = 'none';
+                        if (noResultsSearchRow) noResultsSearchRow.style.display = 'none';
 
-            const fotoUrl = datosAlumno.foto_url ? '../' + datosAlumno.foto_url : '';
-            const verFotoAlumnoDiv = document.getElementById('ver-foto-alumno');
-            verFotoAlumnoDiv.innerHTML = ''; // Limpiar contenido anterior
-            if (fotoUrl) {
-                verFotoAlumnoDiv.innerHTML = '<img src="' + fotoUrl + '" alt="Foto del alumno" style="max-width:180px;max-height:180px;border-radius:8px;border:1px solid #e2e8f0;">';
-            } else {
-                verFotoAlumnoDiv.innerHTML = '<span style="color:#64748b;">Sin foto</span>';
-            }
+                        for (let i = 0; i < tr.length; i++) {
+                            let row = tr[i];
 
-            if (verAlumnoContainer) {
-                verAlumnoContainer.style.display = 'flex'; // Cambiar a flex para mostrarlo y centrarlo
-            }
-        }
-        
-        function ocultarVerAlumno() {
-            if (verAlumnoContainer) {
-                verAlumnoContainer.style.display = 'none';
-            }
-        }
+                            // Skip the predefined message rows from the filtering logic itself
+                            if (row.id === 'noAlumnosRow' || row.id === 'noResultsSearchRow') {
+                                continue;
+                            }
 
-        // Cerrar modal de ver alumno si se hace clic fuera del contenido del modal (en el overlay)
-        if (verAlumnoContainer) {
-            verAlumnoContainer.addEventListener('click', function(event) {
-                if (event.target === verAlumnoContainer) { // Si el clic fue directamente en el overlay
-                    ocultarVerAlumno();
-                }
-            });
-        }
+                            let displayRow = false;
+                            // Ensure cells exist before trying to access textContent
+                            const legajoTd = row.cells[0];
+                            const nombreCompletoTd = row.cells[1];
+                            const dniTd = row.cells[2];
+                            // You can also add other cells like cohorte (row.cells[3]) or username (row.cells[4]) if needed
 
-    </script>
+                            if (legajoTd && nombreCompletoTd && dniTd) {
+                                const legajoText = legajoTd.textContent || legajoTd.innerText;
+                                const nombreCompletoText = nombreCompletoTd.textContent || nombreCompletoTd.innerText;
+                                const dniText = dniTd.textContent || dniTd.innerText;
+
+                                if (legajoText.toLowerCase().indexOf(filter) > -1 ||
+                                    nombreCompletoText.toLowerCase().indexOf(filter) > -1 ||
+                                    dniText.toLowerCase().indexOf(filter) > -1) {
+                                    displayRow = true;
+                                    foundMatch = true;
+                                }
+                            }
+                            row.style.display = displayRow ? "" : "none";
+                        }
+
+                        // Logic to display the correct "no results" message
+                        const isListaAlumnosEmpty = <?php echo empty($lista_alumnos) ? 'true' : 'false'; ?>;
+
+                        if (filter === "") { // Search is cleared
+                            if (isListaAlumnosEmpty && noAlumnosRow) {
+                                noAlumnosRow.style.display = ''; // Show "No hay alumnos registrados"
+                            }
+                            if (noResultsSearchRow) {
+                                noResultsSearchRow.style.display = 'none'; // Hide "No se encontraron..."
+                            }
+                            // All actual data rows were already set to display="" if they exist
+                        } else { // Search has text
+                            if (!foundMatch && noResultsSearchRow) {
+                                noResultsSearchRow.style.display = ''; // Show "No se encontraron alumnos que coincidan..."
+                            }
+                            if (noAlumnosRow) {
+                                noAlumnosRow.style.display = 'none'; // Hide "No hay alumnos" (if it was somehow visible)
+                            }
+                        }
+                    }
+
+                    const creacionFormCard = document.getElementById('creacionFormCard');
+
+                    function mostrarFormCreacion() {
+                        creacionFormCard.style.display = 'block';
+                        creacionFormCard.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+
+                    function ocultarFormCreacion() {
+                        creacionFormCard.style.display = 'none';
+                    }
+
+                    const edicionFormContainer = document.getElementById('edicionFormContainer');
+
+                    // Asegurarse de que esté oculto al cargar la página
+                    if (edicionFormContainer) {
+                        edicionFormContainer.style.display = 'none';
+                    }
+
+                    function cargarDatosEdicion(alumno) {
+                        document.getElementById('edit-persona-id').value = alumno.persona_id;
+                        document.getElementById('edit-apellidos').value = alumno.apellidos;
+                        document.getElementById('edit-nombres').value = alumno.nombres;
+                        document.getElementById('edit-dni').value = alumno.dni;
+                        document.getElementById('edit-fecha-nacimiento').value = alumno.fecha_nacimiento;
+                        document.getElementById('edit-celular').value = alumno.celular || '';
+                        document.getElementById('edit-domicilio').value = alumno.domicilio || '';
+                        document.getElementById('edit-contacto-emergencia').value = alumno.contacto_emergencia || '';
+                        document.getElementById('edit-legajo').value = alumno.legajo;
+                        document.getElementById('edit-fecha-ingreso').value = alumno.fecha_ingreso;
+                        document.getElementById('edit-cohorte').value = alumno.cohorte;
+                        document.getElementById('edit-activo').value = alumno.activo == '1' ? '1' : '0';
+
+                        if (edicionFormContainer) {
+                            edicionFormContainer.style.display = 'flex'; // Cambiar a flex para mostrarlo y centrarlo
+                        }
+
+                        // Opcional: si el contenido del modal es muy largo, hacer scroll a su inicio
+                        const modalContent = edicionFormContainer.querySelector('.modal-content');
+                        if (modalContent) {
+                            modalContent.scrollTop = 0;
+                        }
+                    }
+
+                    function ocultarFormEdicion() {
+                        if (edicionFormContainer) {
+                            edicionFormContainer.style.display = 'none';
+                        }
+                    }
+
+                    // Cerrar modal de edición si se hace clic fuera del contenido del modal (en el overlay)
+                    if (edicionFormContainer) {
+                        edicionFormContainer.addEventListener('click', function(event) {
+                            if (event.target === edicionFormContainer) { // Si el clic fue directamente en el overlay
+                                ocultarFormEdicion();
+                            }
+                        });
+                    }
+
+                    const verAlumnoContainer = document.getElementById('verAlumnoContainer');
+
+                    function mostrarVerAlumno(datosAlumno) {
+                        document.getElementById('ver-apellidos').value = datosAlumno.apellidos;
+                        document.getElementById('ver-nombres').value = datosAlumno.nombres;
+                        document.getElementById('ver-dni').value = datosAlumno.dni;
+                        document.getElementById('ver-fecha-nacimiento').value = datosAlumno.fecha_nacimiento;
+                        document.getElementById('ver-celular').value = datosAlumno.celular || '';
+                        document.getElementById('ver-domicilio').value = datosAlumno.domicilio || '';
+                        document.getElementById('ver-contacto-emergencia').value = datosAlumno.contacto_emergencia || '';
+                        document.getElementById('ver-legajo').value = datosAlumno.legajo;
+                        document.getElementById('ver-fecha-ingreso').value = datosAlumno.fecha_ingreso;
+                        document.getElementById('ver-cohorte').value = datosAlumno.cohorte;
+                        document.getElementById('ver-username').value = datosAlumno.username;
+                        document.getElementById('ver-estado').value = datosAlumno.activo == '1' ? 'Activo' : 'Inactivo';
+
+                        const fotoUrl = datosAlumno.foto_url ? '../' + datosAlumno.foto_url : '';
+                        const verFotoAlumnoDiv = document.getElementById('ver-foto-alumno');
+                        verFotoAlumnoDiv.innerHTML = ''; // Limpiar contenido anterior
+                        if (fotoUrl) {
+                            verFotoAlumnoDiv.innerHTML = '<img src="' + fotoUrl + '" alt="Foto del alumno" style="max-width:180px;max-height:180px;border-radius:8px;border:1px solid #e2e8f0;">';
+                        } else {
+                            verFotoAlumnoDiv.innerHTML = '<span style="color:#64748b;">Sin foto</span>';
+                        }
+
+                        if (verAlumnoContainer) {
+                            verAlumnoContainer.style.display = 'flex'; // Cambiar a flex para mostrarlo y centrarlo
+                        }
+                    }
+
+                    function ocultarVerAlumno() {
+                        if (verAlumnoContainer) {
+                            verAlumnoContainer.style.display = 'none';
+                        }
+                    }
+
+                    // Cerrar modal de ver alumno si se hace clic fuera del contenido del modal (en el overlay)
+                    if (verAlumnoContainer) {
+                        verAlumnoContainer.addEventListener('click', function(event) {
+                            if (event.target === verAlumnoContainer) { // Si el clic fue directamente en el overlay
+                                ocultarVerAlumno();
+                            }
+                        });
+                    }
+                </script>
 </body>
+
 </html>

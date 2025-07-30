@@ -1,70 +1,74 @@
 <?php
-// usuarios.php - Gestión unificada de usuarios del sistema
+// usuarios.php - Gestión unificada de usuarios del sistema 
 session_start();
 if (!isset($_SESSION['usuario_id']) || $_SESSION['tipo'] !== 'administrador') {
     header("Location: index.php");
     exit;
 }
 
-$mysqli = new mysqli("localhost", "root", "", "isef_sistema");
-if ($mysqli->connect_errno) {
-    die("Fallo la conexión: " . $mysqli->connect_error);
+// Incluir el archivo de conexión a la base de datos
+// Asegúrate de que la ruta a tu archivo db.php es correcta
+require_once '../config/db.php';
+
+// --- Obtener datos del usuario para el sidebar ---
+$usuario_sidebar = ['nombre_completo' => 'Admin ISEF']; // Fallback
+$stmt_user_sidebar = $mysqli->prepare("
+    SELECT CONCAT(p.nombres, ' ', p.apellidos) as nombre_completo 
+    FROM persona p 
+    JOIN usuario u ON p.usuario_id = u.id 
+    WHERE u.id = ?
+");
+if ($stmt_user_sidebar) {
+    $stmt_user_sidebar->bind_param("i", $_SESSION['usuario_id']);
+    $stmt_user_sidebar->execute();
+    $result_user = $stmt_user_sidebar->get_result();
+    if ($result_user->num_rows > 0) {
+        $usuario_sidebar = $result_user->fetch_assoc();
+    }
+    $stmt_user_sidebar->close();
 }
 
-// --- Helper function to generate user row HTML ---
 
-function generarFilaUsuarioHTML($usuario, $mysqli) {
-    $foto = !empty($usuario['foto']) 
-        ? '/ISEF-programadores-2/uploads/' . htmlspecialchars($usuario['foto']) 
-        : '/ISEF-programadores-2/uploads/default.png';
+// --- Función para generar la fila HTML de un usuario en la tabla ---
+function generarFilaUsuarioHTML($usuario)
+{
+    // Usa una imagen por defecto si no hay foto
+    $foto = !empty($usuario['foto'])
+        ? '../uploads/' . htmlspecialchars($usuario['foto'])
+        : '../sources/default-user.png'; // Ruta a una imagen por defecto
+
+    // Prepara los datos del usuario para el botón de editar en formato JSON
+    $datos_usuario_json = htmlspecialchars(json_encode($usuario), ENT_QUOTES, 'UTF-8');
+
     $filaHTML = '<tr>';
+    $filaHTML .= '<td><img src="' . $foto . '" alt="Foto" style="width:40px;height:40px;border-radius:50%;object-fit:cover;"></td>';
     $filaHTML .= '<td>' . ucfirst(htmlspecialchars($usuario['tipo'])) . '</td>';
     $filaHTML .= '<td>' . htmlspecialchars($usuario['apellidos']) . ', ' . htmlspecialchars($usuario['nombres']) . '</td>';
     $filaHTML .= '<td>' . htmlspecialchars($usuario['dni']) . '</td>';
     $filaHTML .= '<td>' . htmlspecialchars($usuario['username']) . '</td>';
-    $filaHTML .= '<td>
-                    <span class="' . ($usuario['activo'] ? 'active-yes' : 'active-no') . '">'
-                    . ($usuario['activo'] ? 'Activo' : 'Inactivo') .
-                    '</span><br>'
-                    . ($usuario['debe_cambiar_password'] ? '<small>(Cambiar pass)</small>' : '') .
-                 '</td>';
-    $filaHTML .= '<td><img src="' . $foto . '" alt="Foto" style="width:50px;height:50px;border-radius:50%;object-fit:cover;"></td>';
-    $filaHTML .= '<td class="actions-cell">
-                     <button type="button" class="edit" 
-                        data-usuario_id="' . $usuario['usuario_id'] . '"
-                        data-tipo="' . htmlspecialchars($usuario['tipo']) . '"
-                        data-activo="' . $usuario['activo'] . '"
-                        data-debe_cambiar_password="' . $usuario['debe_cambiar_password'] . '"
-                        data-apellidos="' . htmlspecialchars($usuario['apellidos']) . '"
-                        data-nombres="' . htmlspecialchars($usuario['nombres']) . '"
-                        data-dni="' . htmlspecialchars($usuario['dni']) . '"
-                        data-fecha_nacimiento="' . htmlspecialchars($usuario['fecha_nacimiento']) . '"
-                        data-celular="' . htmlspecialchars($usuario['celular'] ?? '') . '"
-                        data-domicilio="' . htmlspecialchars($usuario['domicilio'] ?? '') . '"
-                        data-contacto_emergencia="' . htmlspecialchars($usuario['contacto_emergencia'] ?? '') . '"
-                        data-legajo_alumno="' . htmlspecialchars($usuario['legajo_alumno'] ?? '') . '"
-                        data-cohorte_alumno="' . htmlspecialchars($usuario['cohorte_alumno'] ?? '') . '"
-                        data-fecha_ingreso_alumno="' . htmlspecialchars($usuario['fecha_ingreso_alumno'] ?? '') . '"
-                        data-titulo_profesional_profesor="' . htmlspecialchars($usuario['titulo_profesional_profesor'] ?? '') . '"
-                        data-fecha_ingreso_profesor="' . htmlspecialchars($usuario['fecha_ingreso_profesor'] ?? '') . '"
-                        data-horas_consulta_profesor="' . htmlspecialchars($usuario['horas_consulta_profesor'] ?? '') . '"
-                        data-titulo_profesional_preceptor="' . htmlspecialchars($usuario['titulo_profesional_preceptor'] ?? '') . '"
-                        data-fecha_ingreso_preceptor="' . htmlspecialchars($usuario['fecha_ingreso_preceptor'] ?? '') . '"
-                        data-sector_asignado_preceptor="' . htmlspecialchars($usuario['sector_asignado_preceptor'] ?? '') . '"
-                        data-foto="' . htmlspecialchars($usuario['foto'] ?? '') . '"
-                        onclick="populateEditForm(this)"><i data-lucide="edit-2"></i> Editar</button>
+    $filaHTML .= '<td>';
+    if ($usuario['activo']) {
+        $filaHTML .= '<span class="badge badge-success"><i data-lucide="user-check"></i>Activo</span>';
+    } else {
+        $filaHTML .= '<span class="badge badge-danger"><i data-lucide="user-x"></i>Inactivo</span>';
+    }
+    if ($usuario['debe_cambiar_password']) {
+        $filaHTML .= '<br><small style="color:#c2410c;">(Cambiar pass)</small>';
+    }
+    $filaHTML .= '</td>';
+    $filaHTML .= '<td class="table-actions">
+                     <button type="button" class="btn btn-outline btn-sm" onclick="cargarDatosEdicion(' . $datos_usuario_json . ')"><i data-lucide="edit-2"></i> Editar</button>
                     <form method="post" style="display:inline;" onsubmit="return confirm(\'¿Está seguro de eliminar este usuario? Esta acción no se puede deshacer y eliminará todos los datos asociados.\');">
                         <input type="hidden" name="accion" value="eliminar">
                         <input type="hidden" name="usuario_id" value="' . $usuario['usuario_id'] . '">
-                        <button type="submit" class="delete"><i data-lucide="trash-2"></i> Eliminar</button>
+                        <button type="submit" class="btn btn-outline btn-danger-outline btn-sm"><i data-lucide="trash-2"></i> Eliminar</button>
                     </form>
                 </td>';
     $filaHTML .= '</tr>';
     return $filaHTML;
 }
-// --- End Helper function ---
 
-// --- AJAX Search Handling ---
+// --- Búsqueda por AJAX ---
 if (isset($_GET['action']) && $_GET['action'] === 'search_users' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
     $searchTerm = $mysqli->real_escape_string($_GET['term'] ?? '');
     $searchQuery = "
@@ -90,22 +94,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'search_users' && isset($_SERV
     $output = '';
     if ($result && $result->num_rows > 0) {
         while ($usuario = $result->fetch_assoc()) {
-            $output .= generarFilaUsuarioHTML($usuario, $mysqli);
+            $output .= generarFilaUsuarioHTML($usuario);
         }
     } else {
-        $output = '<tr><td colspan="8">No se encontraron usuarios con ese criterio.</td></tr>';
+        $output = '<tr id="noResultsSearchRow"><td colspan="7" style="text-align:center; padding: 2rem;">No se encontraron usuarios que coincidan con la búsqueda.</td></tr>';
     }
     echo $output;
     $mysqli->close();
     exit;
 }
-// --- End AJAX Search Handling ---
 
-$mensaje = '';
-$error = '';
-
-// Función para generar nombre de usuario único
-function generarUsername($nombre, $apellido, $mysqli) {
+// --- Función para generar un nombre de usuario único ---
+function generarUsername($nombre, $apellido, $mysqli)
+{
     setlocale(LC_ALL, 'en_US.UTF-8');
     $nombre = strtolower(trim($nombre));
     $apellido = strtolower(trim($apellido));
@@ -118,7 +119,7 @@ function generarUsername($nombre, $apellido, $mysqli) {
         $stmt_check = $mysqli->prepare("SELECT id FROM usuario WHERE username = ?");
         if (!$stmt_check) {
             error_log("Error al preparar la consulta para verificar username: " . $mysqli->error);
-            return $baseUsername . time();
+            return $baseUsername . time(); // Fallback
         }
         $stmt_check->bind_param("s", $username);
         $stmt_check->execute();
@@ -132,192 +133,202 @@ function generarUsername($nombre, $apellido, $mysqli) {
     }
 }
 
-// Procesar acciones POST (crear, editar, eliminar)
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['accion'])) {
-        if ($_POST['accion'] === 'crear') {
-            $mysqli->begin_transaction();
-            try {
-                $username = generarUsername($_POST['nombres'], $_POST['apellidos'], $mysqli); 
-                $password_hash = password_hash($_POST['dni'], PASSWORD_DEFAULT); 
-                $tipo = $_POST['tipo'];
-                $activo = 1;
-                $debe_cambiar = 1;
 
-                // --- FOTO ---
-                $foto_nombre = '';
-                if (isset($_FILES['foto_usuario']) && $_FILES['foto_usuario']['error'] === UPLOAD_ERR_OK) {
-                    $ext = pathinfo($_FILES['foto_usuario']['name'], PATHINFO_EXTENSION);
-                    $foto_nombre = uniqid('foto_') . '.' . $ext;
-                    move_uploaded_file($_FILES['foto_usuario']['tmp_name'], __DIR__ . '/../uploads/' . $foto_nombre);
-                }
+// --- Procesar acciones POST (crear, editar, eliminar) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['accion'])) {
 
-                $stmt_usuario = $mysqli->prepare("INSERT INTO usuario (username, password, tipo, activo, debe_cambiar_password) VALUES (?, ?, ?, ?, ?)");
-                if (!$stmt_usuario) {
-                    throw new Exception("Error al preparar la consulta para 'usuario': " . $mysqli->error);
-                }
-                $stmt_usuario->bind_param("sssii", $username, $password_hash, $tipo, $activo, $debe_cambiar);
-                if (!$stmt_usuario->execute()) {
-                    throw new Exception("Error al ejecutar la consulta para 'usuario': " . $stmt_usuario->error);
-                }
-                $usuario_id = $mysqli->insert_id; 
-                $stmt_usuario->close(); 
+    // --- Acción CREAR ---
+    if ($_POST['accion'] === 'crear') {
+        $mysqli->begin_transaction();
+        try {
+            // Generar usuario y contraseña
+            $username = generarUsername($_POST['nombres'], $_POST['apellidos'], $mysqli);
+            $password_hash = password_hash($_POST['dni'], PASSWORD_DEFAULT);
+            $tipo = $_POST['tipo'];
+            $activo = 1; // Siempre activo al crear
+            $debe_cambiar = 1; // Siempre forzar cambio de pass al crear
 
-                $stmt_persona = $mysqli->prepare("INSERT INTO persona (usuario_id, apellidos, nombres, dni, fecha_nacimiento, celular, domicilio, contacto_emergencia, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                if (!$stmt_persona) {
-                    throw new Exception("Error al preparar la consulta para 'persona': " . $mysqli->error);
+            // Manejo de la foto
+            $foto_nombre = '';
+            if (isset($_FILES['foto_usuario']) && $_FILES['foto_usuario']['error'] === UPLOAD_ERR_OK) {
+                $ext = pathinfo($_FILES['foto_usuario']['name'], PATHINFO_EXTENSION);
+                $foto_nombre = 'user_' . $username . '_' . time() . '.' . $ext;
+                $destino = realpath(__DIR__ . '/../uploads') . DIRECTORY_SEPARATOR . $foto_nombre;
+                if (!move_uploaded_file($_FILES['foto_usuario']['tmp_name'], $destino)) {
+                    throw new Exception("Error al mover el archivo de la foto.");
                 }
-                $stmt_persona->bind_param("issssssss", $usuario_id, $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia'], $foto_nombre);
-                if (!$stmt_persona->execute()) {
-                    throw new Exception("Error al ejecutar la consulta para 'persona': " . $stmt_persona->error);
-                }
-                $persona_id = $mysqli->insert_id; 
-                $stmt_persona->close(); 
-
-                $stmt_role = null; 
-                switch ($tipo) { 
-                    case 'alumno':
-                        $stmt_role = $mysqli->prepare("INSERT INTO alumno (persona_id, legajo, fecha_ingreso, cohorte) VALUES (?, ?, ?, ?)"); 
-                        if (!$stmt_role) {
-                             throw new Exception("Error al preparar la consulta para 'alumno': " . $mysqli->error);
-                        }
-                        $stmt_role->bind_param("issi", $persona_id, $_POST['legajo_alumno'], $_POST['fecha_ingreso_alumno'], $_POST['cohorte_alumno']); 
-                        break;
-                    case 'profesor':
-                        $stmt_role = $mysqli->prepare("INSERT INTO profesor (persona_id, titulo_profesional, fecha_ingreso, horas_consulta) VALUES (?, ?, ?, ?)"); 
-                        if (!$stmt_role) {
-                             throw new Exception("Error al preparar la consulta para 'profesor': " . $mysqli->error);
-                        }
-                        $stmt_role->bind_param("isss", $persona_id, $_POST['titulo_profesional_profesor'], $_POST['fecha_ingreso_profesor'], $_POST['horas_consulta_profesor']); 
-                        break;
-                    case 'preceptor':
-                        $stmt_role = $mysqli->prepare("INSERT INTO preceptor (persona_id, titulo_profesional, fecha_ingreso, sector_asignado) VALUES (?, ?, ?, ?)"); 
-                        if (!$stmt_role) {
-                             throw new Exception("Error al preparar la consulta para 'preceptor': " . $mysqli->error);
-                        }
-                        $stmt_role->bind_param("isss", $persona_id, $_POST['titulo_profesional_preceptor'], $_POST['fecha_ingreso_preceptor'], $_POST['sector_asignado_preceptor']); 
-                        break;
-                }
-                if ($stmt_role) {
-                    if (!$stmt_role->execute()) {
-                        throw new Exception("Error al ejecutar la consulta para el rol específico '$tipo': " . $stmt_role->error);
-                    }
-                    $stmt_role->close(); 
-                }
-                $mysqli->commit(); 
-                $mensaje = "Usuario creado correctamente. Nombre de usuario: $username"; 
-            } catch (Exception $e) {
-                $mysqli->rollback(); 
-                $error = "Error al crear el usuario: " . $e->getMessage(); 
             }
-        } elseif ($_POST['accion'] === 'editar') {
-            $mysqli->begin_transaction();
-            try {
-                $usuario_id_edit = (int)$_POST['usuario_id_edit'];
-                $tipo = $_POST['tipo'];
-                $activo = isset($_POST['activo_estado']) ? (int)$_POST['activo_estado'] : 0;
-                $debe_cambiar = isset($_POST['debe_cambiar_password_edit']) && $_POST['debe_cambiar_password_edit'] == '1' ? 1 : 0;
 
-                $stmt_usuario_update = $mysqli->prepare("UPDATE usuario SET tipo = ?, activo = ?, debe_cambiar_password = ? WHERE id = ?");
-                if(!$stmt_usuario_update) throw new Exception("Error al preparar update para 'usuario': ".$mysqli->error);
-                $stmt_usuario_update->bind_param("siii", $tipo, $activo, $debe_cambiar, $usuario_id_edit);
-                if(!$stmt_usuario_update->execute()) throw new Exception("Error al ejecutar update para 'usuario': ".$stmt_usuario_update->error);
-                $stmt_usuario_update->close();
+            // Insertar en `usuario`
+            $stmt_usuario = $mysqli->prepare("INSERT INTO usuario (username, password, tipo, activo, debe_cambiar_password) VALUES (?, ?, ?, ?, ?)");
+            $stmt_usuario->bind_param("sssii", $username, $password_hash, $tipo, $activo, $debe_cambiar);
+            $stmt_usuario->execute();
+            $usuario_id = $mysqli->insert_id;
+            $stmt_usuario->close();
 
-                // --- FOTO ---
-                $foto_nombre = '';
-                $sql_foto = '';
-                if (isset($_FILES['foto_usuario']) && $_FILES['foto_usuario']['error'] === UPLOAD_ERR_OK) {
-                    $ext = pathinfo($_FILES['foto_usuario']['name'], PATHINFO_EXTENSION);
-                    $foto_nombre = uniqid('foto_') . '.' . $ext;
-                    move_uploaded_file($_FILES['foto_usuario']['tmp_name'], __DIR__ . '/../uploads/' . $foto_nombre);
-                    $sql_foto = ", foto = ?";
-                }
+            // Insertar en `persona`
+            $stmt_persona = $mysqli->prepare("INSERT INTO persona (usuario_id, apellidos, nombres, dni, fecha_nacimiento, celular, domicilio, contacto_emergencia, foto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_persona->bind_param("issssssss", $usuario_id, $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia'], $foto_nombre);
+            $stmt_persona->execute();
+            $persona_id = $mysqli->insert_id;
+            $stmt_persona->close();
 
-                if ($sql_foto) {
-                    $stmt_persona_update = $mysqli->prepare("UPDATE persona SET apellidos = ?, nombres = ?, dni = ?, fecha_nacimiento = ?, celular = ?, domicilio = ?, contacto_emergencia = ? $sql_foto WHERE usuario_id = ?");
-                    if(!$stmt_persona_update) throw new Exception("Error al preparar update para 'persona': ".$mysqli->error);
-                    $stmt_persona_update->bind_param("ssssssssi", $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia'], $foto_nombre, $usuario_id_edit);
-                } else {
-                    $stmt_persona_update = $mysqli->prepare("UPDATE persona SET apellidos = ?, nombres = ?, dni = ?, fecha_nacimiento = ?, celular = ?, domicilio = ?, contacto_emergencia = ? WHERE usuario_id = ?");
-                    if(!$stmt_persona_update) throw new Exception("Error al preparar update para 'persona': ".$mysqli->error);
-                    $stmt_persona_update->bind_param("sssssssi", $_POST['apellidos'], $_POST['nombres'], $_POST['dni'], $_POST['fecha_nacimiento'], $_POST['celular'], $_POST['domicilio'], $_POST['contacto_emergencia'], $usuario_id_edit);
-                }
-                if(!$stmt_persona_update->execute()) throw new Exception("Error al ejecutar update para 'persona': ".$stmt_persona_update->error);
-                $stmt_persona_update->close();
+            // Insertar en la tabla del ROL específico
+            $stmt_role = null;
+            switch ($tipo) {
+                case 'alumno':
+                    $stmt_role = $mysqli->prepare("INSERT INTO alumno (persona_id, legajo, fecha_ingreso, cohorte) VALUES (?, ?, ?, ?)");
+                    $stmt_role->bind_param("isss", $persona_id, $_POST['legajo_alumno'], $_POST['fecha_ingreso_alumno'], $_POST['cohorte_alumno']);
+                    break;
+                case 'profesor':
+                    $stmt_role = $mysqli->prepare("INSERT INTO profesor (persona_id, titulo_profesional, fecha_ingreso, horas_consulta) VALUES (?, ?, ?, ?)");
+                    $stmt_role->bind_param("isss", $persona_id, $_POST['titulo_profesional_profesor'], $_POST['fecha_ingreso_profesor'], $_POST['horas_consulta_profesor']);
+                    break;
+                case 'preceptor':
+                    $stmt_role = $mysqli->prepare("INSERT INTO preceptor (persona_id, titulo_profesional, fecha_ingreso, sector_asignado) VALUES (?, ?, ?, ?)");
+                    $stmt_role->bind_param("isss", $persona_id, $_POST['titulo_profesional_preceptor'], $_POST['fecha_ingreso_preceptor'], $_POST['sector_asignado_preceptor']);
+                    break;
+            }
+            if ($stmt_role) {
+                $stmt_role->execute();
+                $stmt_role->close();
+            }
 
-                $persona_id_result = $mysqli->query("SELECT id FROM persona WHERE usuario_id = $usuario_id_edit");
-                if ($persona_id_result->num_rows > 0) {
-                    $persona_id = $persona_id_result->fetch_assoc()['id'];
-                    if ($tipo !== 'alumno') $mysqli->query("DELETE FROM alumno WHERE persona_id = $persona_id");
-                    if ($tipo !== 'profesor') $mysqli->query("DELETE FROM profesor WHERE persona_id = $persona_id");
-                    if ($tipo !== 'preceptor') $mysqli->query("DELETE FROM preceptor WHERE persona_id = $persona_id");
-                    $stmt_role_update = null;
-                    if ($tipo === 'alumno') {
-                        $stmt_role_update = $mysqli->prepare("INSERT INTO alumno (persona_id, legajo, fecha_ingreso, cohorte) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE legajo=VALUES(legajo), fecha_ingreso=VALUES(fecha_ingreso), cohorte=VALUES(cohorte)");
-                        if(!$stmt_role_update) throw new Exception("Error al preparar insert/update para 'alumno': ".$mysqli->error);
-                        $stmt_role_update->bind_param("isss", $persona_id, $_POST['legajo_alumno'], $_POST['fecha_ingreso_alumno'], $_POST['cohorte_alumno']);
-                    } elseif ($tipo === 'profesor') {
-                        $stmt_role_update = $mysqli->prepare("INSERT INTO profesor (persona_id, titulo_profesional, fecha_ingreso, horas_consulta) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE titulo_profesional=VALUES(titulo_profesional), fecha_ingreso=VALUES(fecha_ingreso), horas_consulta=VALUES(horas_consulta)");
-                        if(!$stmt_role_update) throw new Exception("Error al preparar insert/update para 'profesor': ".$mysqli->error);
-                        $stmt_role_update->bind_param("isss", $persona_id, $_POST['titulo_profesional_profesor'], $_POST['fecha_ingreso_profesor'], $_POST['horas_consulta_profesor']);
-                    } elseif ($tipo === 'preceptor') {
-                        $stmt_role_update = $mysqli->prepare("INSERT INTO preceptor (persona_id, titulo_profesional, fecha_ingreso, sector_asignado) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE titulo_profesional=VALUES(titulo_profesional), fecha_ingreso=VALUES(fecha_ingreso), sector_asignado=VALUES(sector_asignado)");
-                        if(!$stmt_role_update) throw new Exception("Error al preparar insert/update para 'preceptor': ".$mysqli->error);
-                        $stmt_role_update->bind_param("isss", $persona_id, $_POST['titulo_profesional_preceptor'], $_POST['fecha_ingreso_preceptor'], $_POST['sector_asignado_preceptor']);
+            $mysqli->commit();
+            $_SESSION['mensaje_exito'] = "Usuario creado correctamente. Nombre de usuario: $username";
+        } catch (Exception $e) {
+            $mysqli->rollback();
+            $_SESSION['mensaje_error'] = "Error al crear el usuario: " . $e->getMessage();
+        }
+    }
+    // --- Acción EDITAR ---
+    elseif ($_POST['accion'] === 'editar') {
+        $mysqli->begin_transaction();
+        try {
+            $usuario_id_edit = (int)$_POST['usuario_id_edit'];
+            $tipo_edit = $_POST['tipo_edit'];
+            $activo_edit = isset($_POST['activo_edit']) ? 1 : 0;
+            $debe_cambiar_edit = isset($_POST['debe_cambiar_password_edit']) ? 1 : 0;
+
+            // 1. Actualizar tabla `usuario`
+            $stmt_usuario_update = $mysqli->prepare("UPDATE usuario SET tipo = ?, activo = ?, debe_cambiar_password = ? WHERE id = ?");
+            $stmt_usuario_update->bind_param("siii", $tipo_edit, $activo_edit, $debe_cambiar_edit, $usuario_id_edit);
+            $stmt_usuario_update->execute();
+            $stmt_usuario_update->close();
+
+            // 2. Manejar actualización de foto
+            $sql_foto_update = "";
+            $foto_nombre_edit = $_POST['foto_actual']; // Mantener la foto actual por defecto
+            if (isset($_FILES['foto_usuario_edit']) && $_FILES['foto_usuario_edit']['error'] === UPLOAD_ERR_OK) {
+                // Hay una nueva foto, procesarla
+                $ext = pathinfo($_FILES['foto_usuario_edit']['name'], PATHINFO_EXTENSION);
+                $foto_nombre_edit = 'user_id_' . $usuario_id_edit . '_' . time() . '.' . $ext;
+                $destino = realpath(__DIR__ . '/../uploads') . DIRECTORY_SEPARATOR . $foto_nombre_edit;
+
+                if (move_uploaded_file($_FILES['foto_usuario_edit']['tmp_name'], $destino)) {
+                    // Si se movió la nueva, eliminar la antigua si existe y es diferente
+                    if (!empty($_POST['foto_actual']) && file_exists(realpath(__DIR__ . '/../uploads') . DIRECTORY_SEPARATOR . $_POST['foto_actual'])) {
+                        unlink(realpath(__DIR__ . '/../uploads') . DIRECTORY_SEPARATOR . $_POST['foto_actual']);
                     }
-                    if (isset($stmt_role_update)) {
-                        if(!$stmt_role_update->execute()) throw new Exception("Error al ejecutar insert/update para rol '$tipo': ".$stmt_role_update->error);
-                        $stmt_role_update->close();
-                    }
                 } else {
-                    throw new Exception("No se encontró la persona asociada al usuario ID: $usuario_id_edit.");
+                    throw new Exception("Error al mover el nuevo archivo de foto.");
                 }
+            }
+
+            // 3. Actualizar tabla `persona`
+            $stmt_persona_update = $mysqli->prepare("UPDATE persona SET apellidos = ?, nombres = ?, dni = ?, fecha_nacimiento = ?, celular = ?, domicilio = ?, contacto_emergencia = ?, foto = ? WHERE usuario_id = ?");
+            $stmt_persona_update->bind_param("ssssssssi", $_POST['apellidos_edit'], $_POST['nombres_edit'], $_POST['dni_edit'], $_POST['fecha_nacimiento_edit'], $_POST['celular_edit'], $_POST['domicilio_edit'], $_POST['contacto_emergencia_edit'], $foto_nombre_edit, $usuario_id_edit);
+            $stmt_persona_update->execute();
+            $stmt_persona_update->close();
+
+            // 4. Sincronizar roles (complejo pero necesario)
+            $persona_id_result = $mysqli->query("SELECT id FROM persona WHERE usuario_id = $usuario_id_edit");
+            if ($persona_id_result->num_rows === 0) throw new Exception("No se encontró la persona asociada.");
+            $persona_id = $persona_id_result->fetch_assoc()['id'];
+
+            // Borrar roles que NO correspondan al nuevo tipo
+            if ($tipo_edit !== 'alumno') $mysqli->query("DELETE FROM alumno WHERE persona_id = $persona_id");
+            if ($tipo_edit !== 'profesor') $mysqli->query("DELETE FROM profesor WHERE persona_id = $persona_id");
+            if ($tipo_edit !== 'preceptor') $mysqli->query("DELETE FROM preceptor WHERE persona_id = $persona_id");
+
+            // Insertar o actualizar el rol correcto (UPSERT)
+            $stmt_role_update = null;
+            if ($tipo_edit === 'alumno') {
+                $stmt_role_update = $mysqli->prepare("INSERT INTO alumno (persona_id, legajo, fecha_ingreso, cohorte) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE legajo=VALUES(legajo), fecha_ingreso=VALUES(fecha_ingreso), cohorte=VALUES(cohorte)");
+                $stmt_role_update->bind_param("isss", $persona_id, $_POST['legajo_alumno_edit'], $_POST['fecha_ingreso_alumno_edit'], $_POST['cohorte_alumno_edit']);
+            } elseif ($tipo_edit === 'profesor') {
+                $stmt_role_update = $mysqli->prepare("INSERT INTO profesor (persona_id, titulo_profesional, fecha_ingreso, horas_consulta) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE titulo_profesional=VALUES(titulo_profesional), fecha_ingreso=VALUES(fecha_ingreso), horas_consulta=VALUES(horas_consulta)");
+                $stmt_role_update->bind_param("isss", $persona_id, $_POST['titulo_profesional_profesor_edit'], $_POST['fecha_ingreso_profesor_edit'], $_POST['horas_consulta_profesor_edit']);
+            } elseif ($tipo_edit === 'preceptor') {
+                $stmt_role_update = $mysqli->prepare("INSERT INTO preceptor (persona_id, titulo_profesional, fecha_ingreso, sector_asignado) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE titulo_profesional=VALUES(titulo_profesional), fecha_ingreso=VALUES(fecha_ingreso), sector_asignado=VALUES(sector_asignado)");
+                $stmt_role_update->bind_param("isss", $persona_id, $_POST['titulo_profesional_preceptor_edit'], $_POST['fecha_ingreso_preceptor_edit'], $_POST['sector_asignado_preceptor_edit']);
+            }
+
+            if ($stmt_role_update) {
+                $stmt_role_update->execute();
+                $stmt_role_update->close();
+            }
+
+            $mysqli->commit();
+            $_SESSION['mensaje_exito'] = "Usuario actualizado correctamente.";
+        } catch (Exception $e) {
+            $mysqli->rollback();
+            $_SESSION['mensaje_error'] = "Error al actualizar el usuario: " . $e->getMessage();
+        }
+    }
+    // --- Acción ELIMINAR ---
+    elseif ($_POST['accion'] === 'eliminar') {
+        // La eliminación de usuario debería tener ON DELETE CASCADE en la BD
+        // para las tablas persona, alumno, profesor, etc. Si no es así, hay que borrar manualmente.
+        // Asumiendo que la FK en `persona` tiene ON DELETE CASCADE...
+        $mysqli->begin_transaction();
+        try {
+            $stmt_delete = $mysqli->prepare("DELETE FROM usuario WHERE id = ?");
+            if (!$stmt_delete) throw new Exception("Error al preparar la consulta de eliminación.");
+
+            $stmt_delete->bind_param("i", $_POST['usuario_id']);
+            $stmt_delete->execute();
+
+            if ($stmt_delete->affected_rows > 0) {
                 $mysqli->commit();
-                $mensaje = "Usuario actualizado correctamente.";
-            } catch (Exception $e) {
+                $_SESSION['mensaje_exito'] = "Usuario eliminado correctamente.";
+            } else {
                 $mysqli->rollback();
-                $error = "Error al actualizar el usuario: " . $e->getMessage();
+                $_SESSION['mensaje_error'] = "No se pudo eliminar el usuario (quizás ya fue eliminado).";
             }
-        } elseif ($_POST['accion'] === 'eliminar') { 
-            $mysqli->begin_transaction();
-            try {
-                $stmt_delete = $mysqli->prepare("DELETE FROM usuario WHERE id = ?"); 
-                if(!$stmt_delete) throw new Exception("Error al preparar delete para 'usuario': ".$mysqli->error);
-                $stmt_delete->bind_param("i", $_POST['usuario_id']); 
-                if(!$stmt_delete->execute()) throw new Exception("Error al ejecutar delete para 'usuario': ".$stmt_delete->error);
-                if ($stmt_delete->affected_rows > 0) {
-                    $mysqli->commit();
-                    $mensaje = "Usuario eliminado correctamente."; 
-                } else {
-                    $mysqli->rollback();
-                    $error = "No se pudo eliminar el usuario (puede que ya haya sido eliminado o no exista).";
-                }
-                $stmt_delete->close(); 
-            } catch (mysqli_sql_exception $e) {
-                $mysqli->rollback();
-                if ($e->getCode() == 1451) {
-                     $error = "Error al eliminar el usuario: No se puede eliminar porque tiene datos asociados en otras tablas (e.g., inscripciones, evaluaciones). Por favor, elimine primero esos registros.";
-                } else {
-                    $error = "Error de base de datos al eliminar el usuario: " . $e->getMessage();
-                }
-            } catch (Exception $e) {
-                $mysqli->rollback();
-                $error = "Error general al eliminar el usuario: " . $e->getMessage(); 
+            $stmt_delete->close();
+        } catch (mysqli_sql_exception $e) {
+            $mysqli->rollback();
+            if ($e->getCode() == 1451) { // Error de Foreign Key
+                $_SESSION['mensaje_error'] = "Error: No se puede eliminar este usuario porque tiene datos asociados (inscripciones, evaluaciones, etc.).";
+            } else {
+                $_SESSION['mensaje_error'] = "Error de base de datos al eliminar: " . $e->getMessage();
             }
+        } catch (Exception $e) {
+            $mysqli->rollback();
+            $_SESSION['mensaje_error'] = "Error al eliminar el usuario: " . $e->getMessage();
         }
     }
-    if (!(isset($_GET['action']) && $_GET['action'] === 'search_users')) {
-        if (!headers_sent()) {
-            header("Location: usuarios.php?mensaje=" . urlencode($mensaje) . "&error=" . urlencode($error));
-            exit;
-        }
-    }
-} 
 
-if (isset($_GET['mensaje'])) $mensaje = htmlspecialchars($_GET['mensaje']);
-if (isset($_GET['error'])) $error = htmlspecialchars($_GET['error']);
+    // Redirigir para evitar reenvío de formulario
+    header("Location: usuarios.php");
+    exit;
+}
 
+// Recuperar mensajes de la sesión para mostrarlos
+$mensaje_exito = '';
+$mensaje_error = '';
+if (isset($_SESSION['mensaje_exito'])) {
+    $mensaje_exito = $_SESSION['mensaje_exito'];
+    unset($_SESSION['mensaje_exito']);
+}
+if (isset($_SESSION['mensaje_error'])) {
+    $mensaje_error = $_SESSION['mensaje_error'];
+    unset($_SESSION['mensaje_error']);
+}
+
+
+// --- Obtener la lista inicial de todos los usuarios ---
 $usuarios_iniciales_sql = "
     SELECT 
         u.id AS usuario_id, u.username, u.tipo, u.activo, u.debe_cambiar_password,
@@ -332,507 +343,548 @@ $usuarios_iniciales_sql = "
     LEFT JOIN preceptor pc ON p.id = pc.persona_id AND u.tipo = 'preceptor'
     ORDER BY u.tipo, p.apellidos, p.nombres
 ";
-$usuarios_result = $mysqli->query($usuarios_iniciales_sql); 
+$usuarios_result = $mysqli->query($usuarios_iniciales_sql);
 ?>
-
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
-    <title>Gestión de Usuarios - ISEF</title>
-   <style>
-    /* Paleta y variables */
-:root {
-    --orange-primary: rgba(230, 92, 0, 0.9);
-    --orange-light: rgba(255, 140, 66, 0.8);
-    --orange-lighter: rgba(255, 165, 102, 0.7);
-    --orange-lightest: rgba(255, 224, 204, 0.6);
-    --white: rgba(255, 255, 255, 0.9);
-    --white-70: rgba(255, 255, 255, 0.7);
-    --white-50: rgba(255, 255, 255, 0.5);
-    --gray-light: rgba(245, 245, 245, 0.7);
-    --gray-medium: rgba(224, 224, 224, 0.6);
-    --gray-dark: rgba(51, 51, 51, 0.9);
-}
-
-.sidebar {
-    width: 280px;
-    background: var(--orange-primary);
-    backdrop-filter: blur(5px);
-    border-right: 1px solid var(--orange-light);
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    z-index: 10;
-    color: var(--white);
-    box-shadow: 2px 0 8px rgba(0,0,0,0.04);
-    transition: all 0.3s;
-}
-
-/* Layout principal */
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    background: var(--gray-bg);
-    color: var(--gray-dark);
-}
-
-.app-container {
-    display: flex;
-    min-height: 100vh;
-}
-
-/* Sidebar */
-.sidebar {
-    width: 280px;
-    background: var(--orange-primary);
-    color: var(--white);
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100vh;
-    z-index: 10;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.04);
-}
-
-.sidebar-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.sidebar-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    text-decoration: none;
-    color: inherit;
-}
-
-.sidebar-brand img {
-    width: 50px;
-    height: 50px;
-    border-radius: 8px;
-}
-
-.brand-text h1 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0;
-    color: var(--white);
-}
-
-.brand-text p {
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.8);
-    margin: 0;
-}
-
-.sidebar-nav {
-    flex: 1;
-    padding: 1rem 0.5rem 1rem 1rem;
-}
-
-.nav-section {
-    margin-bottom: 2rem;
-}
-
-.nav-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: rgba(255,255,255,0.8);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
-    padding: 0 0.75rem;
-}
-
-.nav-menu {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.nav-item {
-    margin-bottom: 0.25rem;
-}
-
-.nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    color: rgba(255,255,255,0.9);
-    text-decoration: none;
-    border-radius: 6px;
-    transition: all 0.3s;
-    font-size: 0.95rem;
-}
-
-.nav-link:hover, .nav-link.active {
-    background: rgba(255,255,255,0.15);
-    color: var(--white);
-    font-weight: 500;
-}
-
-.nav-icon {
-    width: 16px;
-    height: 16px;
-}
-
-.sidebar-footer {
-    padding: 1rem;
-    border-top: 1px solid rgba(255,255,255,0.1);
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    background: rgba(255,255,255,0.1);
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
-    transition: all 0.3s;
-}
-
-.user-info:hover {
-    background: rgba(255,255,255,0.2);
-}
-
-.user-avatar {
-    width: 32px;
-    height: 32px;
-    background: var(--white);
-    color: var(--orange-primary);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
-.user-details h3 {
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin: 0;
-    color: var(--white);
-}
-
-.user-details p {
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.8);
-    margin: 0;
-}
-
-.logout-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem;
-    color: var(--white);
-    border-radius: 6px;
-    font-size: 0.875rem;
-    border: none;
-    background: rgba(255,255,255,0.1);
-    width: 100%;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.logout-btn:hover {
-    background: rgba(255,255,255,0.2);
-}
-
-/* Main content */
-.main-content {
-    flex: 1;
-    margin-left: 280px;
-    padding: 40px 30px;
-    background: var(--gray-bg);
-    min-height: 100vh;
-    overflow-x: auto;
-}
-
-.header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-}
-
-.sidebar-toggle {
-    background: none;
-    border: none;
-    color: var(--orange-primary);
-    font-size: 1.5rem;
-    cursor: pointer;
-}
-
-.breadcrumb {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.95rem;
-    color: #888;
-}
-
-.breadcrumb a {
-    color: var(--orange-primary);
-    text-decoration: none;
-}
-
-.breadcrumb a:hover {
-    text-decoration: underline;
-}
-
-.header-actions .icon-btn {
-    background: none;
-    border: none;
-    color: var(--orange-primary);
-    font-size: 1.2rem;
-    cursor: pointer;
-}
-
-.content {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-/* Cards */
-.card {
-    background: var(--white);
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    margin-bottom: 20px;
-}
-
-.card-header {
-    background: #f5f5f5;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.card-title {
-    font-size: 1.25rem;
-    margin: 0;
-    color: #333;
-}
-
-.card-description {
-    font-size: 0.95rem;
-    color: #666;
-    margin: 0;
-}
-
-.card-content {
-    padding: 15px;
-}
-
-/* Tabla */
-.table-container {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.styled-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: var(--white);
-}
-
-.styled-table th, .styled-table td {
-    padding: 10px;
-    text-align: left;
-    border-bottom: 1px solid var(--gray-border);
-}
-
-.styled-table th {
-    background-color: #ffe0b2;
-    color: #4e342e;
-}
-
-.styled-table tr:hover {
-    background-color: #fff8e1;
-}
-
-/* Formularios */
-.form-group {
-    margin-bottom: 15px;
-}
-
-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: var(--orange-primary);
-}
-
-input[type="text"], input[type="date"], input[type="number"],
-input[type="email"], input[type="search"], select, textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    box-sizing: border-box;
-    background-color: #fff;
-}
-
-.form-row {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-.form-col {
-    flex: 1;
-    min-width: 300px;
-}
-
-.tipo-fields {
-    display: none;
-    padding: 10px;
-    background-color: #fff3e0;
-    border-radius: 4px;
-    margin-top: 10px;
-}
-
-/* Botones */
-button {
-    padding: 10px 15px;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-right: 5px;
-    font-weight: bold;
-    transition: background 0.2s;
-}
-
-button.save {
-    background-color: var(--orange-primary);
-}
-
-button.edit {
-    background-color: #ffa726;
-}
-
-button.delete {
-    background-color: #ef5350;
-}
-
-button.cancel {
-    background-color: #9e9e9e;
-}
-
-button:hover {
-    opacity: 0.9;
-}
-
-.actions-cell {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-}
-.actions-cell button {
-    margin-bottom: 0;
-    width: auto;
-    min-width: 32px;
-    padding: 6px 10px;
-    font-size: 0.95em;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.actions-cell form {
-    display: inline;
-}
-
-/* Estado usuario */
-.active-yes {
-    color: #388e3c;
-    font-weight: bold;
-}
-
-.active-no {
-    color: #d32f2f;
-    font-weight: bold;
-}
-
-/* Foto */
-.foto-preview {
-    margin-top: 10px;
-    border: 1px solid #ccc;
-    padding: 5px;
-    border-radius: 4px;
-    max-width: 150px;
-}
-
-/* Mensajes tipo toast */
-.message-toast {
-    padding: 10px 15px;
-    border-radius: 6px;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.message-toast.success {
-    background-color: var(--success-bg);
-    color: var(--success-text);
-}
-
-.message-toast.error {
-    background-color: var(--error-bg);
-    color: var(--error-text);
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-    .main-content {
-        margin-left: 0;
-        padding: 20px 5px;
-    }
-    .sidebar {
-        position: fixed;
-        left: -280px;
-        transition: left 0.3s;
-    }
-    .sidebar.open {
-        left: 0;
-    }
-}
-
-@media (max-width: 600px) {
-    .form-row {
-        flex-direction: column;
-        gap: 0;
-    }
-    .form-col {
-        min-width: 100%;
-    }
-}
-
-button.save:hover, button.edit:hover, button.delete:hover, button.cancel:hover {
-    filter: brightness(1.1);
-    opacity: 1;
-}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios - Sistema ISEF</title>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        /* Estilos base del dashboard */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: url('../sources/fondo.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #333;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.15);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        :root {
+            --orange-primary: rgba(230, 92, 0, 0.9);
+            --orange-light: rgba(255, 140, 66, 0.8);
+            --gray-dark: rgba(51, 51, 51, 0.9);
+            --white: rgba(255, 255, 255, 0.9);
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgba(230, 92, 0, 0.85);
+            backdrop-filter: blur(5px);
+            border-right: 1px solid var(--orange-light);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            color: var(--white);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .sidebar-brand img {
+            width: 50px;
+            height: 50px;
+        }
+
+        .brand-text h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--white);
+        }
+
+        .brand-text p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem;
+        }
+
+        .nav-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            padding: 0 0.75rem;
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-size: 0.875rem;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--white);
+        }
+
+        .nav-link.active {
+            background: var(--white);
+            color: var(--orange-primary);
+            font-weight: 500;
+        }
+
+        .nav-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--white);
+            color: var(--orange-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .user-details h3 {
+            font-size: 0.875rem;
+            margin: 0;
+            color: var(--white);
+        }
+
+        .user-details p {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            color: var(--white);
+            border-radius: 6px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: var(--orange-primary);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            color: #888;
+        }
+
+        .breadcrumb a {
+            color: var(--orange-primary);
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .content {
+            flex: 1;
+            padding: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-dark);
+        }
+
+        .page-subtitle {
+            color: var(--gray-dark);
+            opacity: 0.9;
+        }
+
+        .message-toast {
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 6px;
+            border: 1px solid transparent;
+        }
+
+        .message-toast.success {
+            background-color: rgba(220, 252, 231, 0.8);
+            color: #166534;
+            border-color: rgba(187, 247, 208, 0.6);
+        }
+
+        .message-toast.error {
+            background-color: rgba(254, 226, 226, 0.8);
+            color: #991b1b;
+            border-color: rgba(254, 202, 202, 0.6);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--gray-dark);
+        }
+
+        .card-description {
+            font-size: 0.875rem;
+            color: var(--gray-dark);
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.5);
+            text-align: right;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            background-color: var(--white);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--orange-primary);
+            outline: none;
+            box-shadow: 0 0 0 1px var(--orange-primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.625rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .btn i {
+            margin-right: 0.5rem;
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn-primary {
+            background-color: var(--orange-primary);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-danger-outline {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .btn-danger-outline:hover {
+            background: #fee2e2;
+        }
+
+        .btn-outline {
+            border: 1px solid #d1d5db;
+            color: #374151;
+        }
+
+        .btn-outline:hover {
+            background-color: #f9fafb;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .table-container {
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(5px);
+        }
+
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .styled-table th,
+        .styled-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 0.875rem;
+        }
+
+        .styled-table th {
+            background-color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+        }
+
+        .styled-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25em 0.6em;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: 9999px;
+        }
+
+        .badge i {
+            width: 12px;
+            height: 12px;
+            margin-right: 0.25rem;
+        }
+
+        .badge-success {
+            background-color: rgba(220, 252, 231, 0.8);
+            color: #15803d;
+        }
+
+        .badge-danger {
+            background-color: rgba(254, 226, 226, 0.8);
+            color: #b91c1c;
+        }
+
+        .modal-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            backdrop-filter: blur(5px);
+        }
+
+        .tipo-fields {
+            display: none;
+            padding: 1rem;
+            background-color: rgba(255, 243, 224, 0.7);
+            border-radius: 6px;
+            margin-top: 1rem;
+            border: 1px solid rgba(255, 224, 178, 0.8);
+        }
+
+        #estado-form-group-edit label,
+        #forzar-pass-form-group-edit label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar-toggle {
+                display: block;
+            }
+        }
     </style>
+</head>
 
-    </head>
 <body>
-        <div class="app-container">
+    <div class="app-container">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <a href="../views/dashboard.php" class="sidebar-brand">
-                    <img src="../../ISEF/sources/logo.jpg" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
+                <a href="dashboard.php" class="sidebar-brand">
+                    <img src="../sources/logo_recortado.png" alt="ISEF Logo">
                     <div class="brand-text">
                         <h1>Sistema de Gestión ISEF</h1>
                         <p>Instituto Superior</p>
@@ -840,39 +892,17 @@ button.save:hover, button.edit:hover, button.delete:hover, button.cancel:hover {
                 </a>
             </div>
             <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-label">Navegación Principal</div>
-                    <ul class="nav-menu">
-                        <li class="nav-item"><a href="dashboard.php" class="nav-link"><i data-lucide="home" class="nav-icon"></i><span>Inicio</span></a></li>
-                        <?php if ($_SESSION['tipo'] === 'administrador'): ?>
-                            <li class="nav-item"><a href="alumnos.php" class="nav-link"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
-                            <li class="nav-item"><a href="profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
-                            <li class="nav-item"><a href="usuarios.php" class="nav-link"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
-                            <li class="nav-item"><a href="materias.php" class="nav-link"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
-                            <li class="nav-item"><a href="cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
-                            <li class="nav-item"><a href="auditoria.php" class="nav-link"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
-                        <?php endif; ?>
-                        <?php if ($_SESSION['tipo'] === 'profesor' || $_SESSION['tipo'] === 'preceptor'): ?>
-                            <li class="nav-item">
-                                <a href="asistencias.php" class="nav-link">
-                                    <i data-lucide="user-check" class="nav-icon"></i>
-                                    <span>Asistencias</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="evaluaciones.php" class="nav-link">
-                                    <i data-lucide="clipboard-check" class="nav-icon"></i>
-                                    <span>Evaluaciones</span>
-                                </a>
-                            </li>
-                        <?php endif; ?>
-                        <?php if ($_SESSION['tipo'] === 'alumno'): ?>
-                            <li class="nav-item"><a href="inscripciones.php" class="nav-link"><i data-lucide="user-plus" class="nav-icon"></i><span>Inscripciones</span></a></li>
-                            <li class="nav-item"><a href="situacion.php" class="nav-link"><i data-lucide="bar-chart-3" class="nav-icon"></i><span>Situación Académica</span></a></li>
-                            <li class="nav-item"><a href="certificados.php" class="nav-link"><i data-lucide="file-text" class="nav-icon"></i><span>Certificados</span></a></li>
-                        <?php endif; ?>
-                    </ul>
-                </div>
+                <ul class="nav-menu">
+                    <li class="nav-item"><a href="dashboard.php" class="nav-link"><i data-lucide="home" class="nav-icon"></i><span>Inicio</span></a></li>
+                    <?php if ($_SESSION['tipo'] === 'administrador'): ?>
+                        <li class="nav-item"><a href="alumnos.php" class="nav-link"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
+                        <li class="nav-item"><a href="profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
+                        <li class="nav-item"><a href="usuarios.php" class="nav-link active"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
+                        <li class="nav-item"><a href="materias.php" class="nav-link"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
+                        <li class="nav-item"><a href="cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
+                        <li class="nav-item"><a href="auditoria.php" class="nav-link"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
+                    <?php endif; ?>
+                </ul>
             </nav>
             <div class="sidebar-footer">
                 <div class="user-info">
@@ -882,322 +912,345 @@ button.save:hover, button.edit:hover, button.delete:hover, button.cancel:hover {
                         <p><?= htmlspecialchars($_SESSION['tipo']) ?>@isef.edu</p>
                     </div>
                 </div>
-                <form method="post" action="logout.php">
-                <button type="submit" class="logout-btn">
+                <button onclick="confirmLogout()" class="logout-btn">
                     <i data-lucide="log-out" class="nav-icon"></i>
                     <span>Cerrar Sesión</span>
                 </button>
-            </form>
             </div>
         </aside>
-        <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
         <main class="main-content">
             <header class="header">
-                <button class="sidebar-toggle" onclick="toggleSidebar()">
-                    <i data-lucide="menu"></i>
-                </button>
+                <button class="sidebar-toggle" onclick="toggleSidebar()"><i data-lucide="menu"></i></button>
                 <nav class="breadcrumb">
                     <a href="dashboard.php">Sistema de Gestión ISEF</a>
                     <span>/</span>
-                    <span>Profesores</span>
+                    <span>Usuarios</span>
                 </nav>
-                <div class="header-actions">
-                    <button class="icon-btn" title="Notificaciones">
-                        <i data-lucide="bell"></i>
-                    </button>
-                </div>
             </header>
+
             <div class="content">
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Gestión de Usuarios</h1>
-                        <p class="page-subtitle">Administra los usuarios del sistema.</p>
+                        <p class="page-subtitle">Crea, edita y administra todos los usuarios del sistema.</p>
                     </div>
-                    <!-- Puedes agregar un botón de "Nuevo Usuario" aquí si lo deseas -->
+                    <button class="btn btn-primary" onclick="mostrarFormCreacion()">
+                        <i data-lucide="plus"></i>
+                        Nuevo Usuario
+                    </button>
                 </div>
-             
-    <div class="container">
-        <h1>Gestión de Usuarios</h1>
-        <a href="dashboard.php">&laquo; Volver al menú</a> 
-        <?php if ($mensaje): ?>
-            <div class="message success"><?= $mensaje ?></div> 
-        <?php endif; ?>
-        <?php if ($error): ?>
-            <div class="message error"><?= $error ?></div> 
-        <?php endif; ?>
 
-        <div class="form-container">
-             <h2 id="formTitle" class="form-title">Nuevo Usuario</h2>
-            <form method="post" id="userForm" enctype="multipart/form-data">
-                <input type="hidden" name="accion" id="accion" value="crear"> 
-                <input type="hidden" name="usuario_id_edit" id="usuario_id_edit" value="">
-                <div class="form-row">
-                    <div class="form-col">
-                        <h3>Datos de Usuario y Personales</h3>
+                <?php if ($mensaje_exito): ?>
+                    <div class="message-toast success" role="alert"><?= htmlspecialchars($mensaje_exito) ?></div>
+                <?php endif; ?>
+                <?php if ($mensaje_error): ?>
+                    <div class="message-toast error" role="alert"><?= htmlspecialchars($mensaje_error) ?></div>
+                <?php endif; ?>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Lista de Usuarios</h2>
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <input type="search" id="searchUserInput" onkeyup="buscarUsuarios()" placeholder="Buscar por Nombre, Apellido, DNI, Usuario, Legajo...">
+                        </div>
+                    </div>
+                    <div class="card-content" style="padding:0;">
+                        <div class="table-container">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Foto</th>
+                                        <th>Tipo</th>
+                                        <th>Nombre Completo</th>
+                                        <th>DNI</th>
+                                        <th>Usuario</th>
+                                        <th>Estado</th>
+                                        <th class="text-right">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="userTableBody">
+                                    <?php
+                                    if ($usuarios_result && $usuarios_result->num_rows > 0) {
+                                        while ($usuario = $usuarios_result->fetch_assoc()) {
+                                            echo generarFilaUsuarioHTML($usuario);
+                                        }
+                                    } else {
+                                        echo '<tr id="noUsersRow"><td colspan="7" style="text-align:center; padding: 2rem;">No hay usuarios registrados.</td></tr>';
+                                    }
+                                    ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="creacionUsuarioModal" class="modal-container">
+        <div class="modal-content card">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="accion" value="crear">
+                <div class="card-header">
+                    <h2 class="card-title">Crear Nuevo Usuario</h2>
+                    <p class="card-description">El DNI se usará como contraseña inicial.</p>
+                </div>
+                <div class="card-content">
+                    <div class="form-grid">
                         <div class="form-group">
-                            <label>Tipo de usuario:</label> 
-                            <select name="tipo" id="tipo" required onchange="mostrarCamposAdicionales()"> 
+                            <label>Tipo de usuario:</label>
+                            <select name="tipo" required onchange="mostrarCamposAdicionales('creacion')">
                                 <option value="">Seleccione tipo</option>
-                                <option value="administrador">Administrador</option> 
-                                <option value="profesor">Profesor</option> 
-                                <option value="preceptor">Preceptor</option> 
-                                <option value="alumno">Alumno</option> 
+                                <option value="administrador">Administrador</option>
+                                <option value="profesor">Profesor</option>
+                                <option value="preceptor">Preceptor</option>
+                                <option value="alumno">Alumno</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>Apellidos:</label> <input type="text" name="apellidos" id="apellidos" required> 
-                        </div>
-                        <div class="form-group">
-                            <label>Nombres:</label> <input type="text" name="nombres" id="nombres" required> 
-                        </div>
-                        <div class="form-group">
-                            <label>DNI (usado como contraseña inicial):</label> <input type="text" name="dni" id="dni" required> 
-                        </div>
-                        <div class="form-group" id="estadoFormGroup">
-                            <label>Estado:</label>
-                            <select name="activo_estado" id="activo_estado">
-                                <option value="1">Activo</option>
-                                <option value="0">Inactivo</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="forzarCambioPassFormGroup">
-                            <label>
-                                <input type="checkbox" name="debe_cambiar_password_edit" id="debe_cambiar_password_edit" value="1">
-                                Forzar cambio de contraseña en próximo inicio de sesión
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label>Foto de perfil:</label>
-                            <input type="file" name="foto_usuario" id="foto_usuario" accept="image/*">
-                            <div id="previewFoto" class="foto-preview"></div>
+                        <div class="form-group"><label>Apellidos:</label><input type="text" name="apellidos" required></div>
+                        <div class="form-group"><label>Nombres:</label><input type="text" name="nombres" required></div>
+                        <div class="form-group"><label>DNI:</label><input type="text" name="dni" required pattern="\d{7,8}"></div>
+                        <div class="form-group"><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento" required></div>
+                        <div class="form-group"><label>Celular:</label><input type="text" name="celular"></div>
+                        <div class="form-group"><label>Domicilio:</label><input type="text" name="domicilio"></div>
+                        <div class="form-group"><label>Contacto de emergencia:</label><input type="text" name="contacto_emergencia"></div>
+                        <div class="form-group"><label>Foto de perfil:</label><input type="file" name="foto_usuario" accept="image/*"></div>
+                    </div>
+                    <div id="campos-alumno-creacion" class="tipo-fields">
+                        <h4>Datos del Alumno</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Legajo:</label><input type="text" name="legajo_alumno"></div>
+                            <div class="form-group"><label>Cohorte:</label><input type="number" name="cohorte_alumno"></div>
+                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_alumno"></div>
                         </div>
                     </div>
-                    <div class="form-col">
-                        <h3>Datos Adicionales</h3>
-                         <div class="form-group">
-                            <label>Fecha de nacimiento:</label> <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" required> 
-                         </div>
-                        <div class="form-group">
-                            <label>Celular:</label> <input type="text" name="celular" id="celular"> 
+                    <div id="campos-profesor-creacion" class="tipo-fields">
+                        <h4>Datos del Profesor</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_profesor"></div>
+                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_profesor"></div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Horas de consulta:</label><textarea name="horas_consulta_profesor" rows="2"></textarea></div>
                         </div>
-                        <div class="form-group">
-                            <label>Domicilio:</label> <input type="text" name="domicilio" id="domicilio"> 
-                        </div>
-                        <div class="form-group">
-                            <label>Contacto de emergencia:</label> <input type="text" name="contacto_emergencia" id="contacto_emergencia"> 
+                    </div>
+                    <div id="campos-preceptor-creacion" class="tipo-fields">
+                        <h4>Datos del Preceptor</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_preceptor"></div>
+                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_preceptor"></div>
+                            <div class="form-group"><label>Sector asignado:</label><input type="text" name="sector_asignado_preceptor"></div>
                         </div>
                     </div>
                 </div>
-                <div class="form-row">
-                    <div class="form-col" style="flex-basis: 100%;">
-                        <div id="campos-alumno" class="tipo-fields"> 
-                            <h4>Datos del Alumno</h4>
-                            <div class="form-group">
-                                <label>Legajo:</label> <input type="text" name="legajo_alumno" id="legajo_alumno"> 
-                            </div>
-                            <div class="form-group">
-                                <label>Cohorte:</label> <input type="number" name="cohorte_alumno" id="cohorte_alumno"> 
-                            </div>
-                            <div class="form-group">
-                                <label>Fecha de ingreso (Alumno):</label> <input type="date" name="fecha_ingreso_alumno" id="fecha_ingreso_alumno"> 
-                            </div>
-                        </div>
-                        <div id="campos-profesor" class="tipo-fields"> 
-                            <h4>Datos del Profesor</h4>
-                            <div class="form-group">
-                                <label>Título profesional:</label> <input type="text" name="titulo_profesional_profesor" id="titulo_profesional_profesor"> 
-                            </div>
-                            <div class="form-group">
-                                <label>Fecha de ingreso (Profesor):</label> <input type="date" name="fecha_ingreso_profesor" id="fecha_ingreso_profesor"> 
-                            </div>
-                            <div class="form-group">
-                                <label>Horas de consulta:</label> <textarea name="horas_consulta_profesor" id="horas_consulta_profesor" rows="3"></textarea> 
-                            </div>
-                        </div>
-                        <div id="campos-preceptor" class="tipo-fields"> 
-                            <h4>Datos del Preceptor</h4>
-                            <div class="form-group">
-                                <label>Título profesional:</label> <input type="text" name="titulo_profesional_preceptor" id="titulo_profesional_preceptor"> 
-                            </div>
-                             <div class="form-group">
-                                <label>Fecha de ingreso (Preceptor):</label> <input type="date" name="fecha_ingreso_preceptor" id="fecha_ingreso_preceptor"> 
-                            </div>
-                            <div class="form-group">
-                                <label>Sector asignado:</label> 
-                                <select name="sector_asignado_preceptor" id="sector_asignado_preceptor"> 
-                                    <option value="">Seleccionar sector</option>
-                                    <option value="Administración">Administración</option> 
-                                    <option value="Biblioteca">Biblioteca</option> 
-                                    <option value="Laboratorio">Laboratorio</option> 
-                                    <option value="Gimnasio">Gimnasio</option> 
-                                    <option value="Aulas">Aulas</option> 
-                                    <option value="Secretaría">Secretaría</option> 
-                                    <option value="Coordinación Académica">Coordinación Académica</option> 
-                                    <option value="Deportes">Deportes</option> 
-                                    <option value="General">General</option> 
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: 10px;">
-                    <button type="submit" id="submitButton" class="save">
-                        <i data-lucide="save"></i> <span id="submitButtonText">Crear Usuario</span>
-                    </button>
-                    <button type="button" id="cancelEditButton" class="cancel" style="display:none; margin-left: 10px;" onclick="resetForm()">
-                        <i data-lucide="x"></i> Cancelar Edición
-                    </button>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-secondary" onclick="ocultarFormCreacion()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;"><i data-lucide="save"></i>Crear Usuario</button>
                 </div>
             </form>
         </div>
-        <div class="card">
-    <div class="card-header">
-        <h2 class="card-title">Lista de Usuarios</h2>
-        <p class="card-description">Visualiza y gestiona los usuarios existentes.</p>
     </div>
-    <div class="card-content">
-        <input type="search" id="searchUserInput" placeholder="Buscar por nombre, apellido, DNI, usuario, legajo..." style="width: 100%; margin-bottom: 1rem;">
-        <div class="table-container">
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th>Tipo</th>
-                        <th>Nombre</th>
-                        <th>DNI</th>
-                        <th>Usuario</th>
-                        <th>Estado</th>
-                        <th>Foto</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="userTableBody">
-                    <?php 
-                    if ($usuarios_result && $usuarios_result->num_rows > 0) {
-                        while ($usuario = $usuarios_result->fetch_assoc()) { 
-                            echo generarFilaUsuarioHTML($usuario, $mysqli);
-                        }
-                    } else {
-                        echo '<tr><td colspan="8">No hay usuarios registrados.</td></tr>';
-                    }
-                    ?>
-                </tbody>
-            </table>
+
+    <div id="edicionUsuarioModal" class="modal-container">
+        <div class="modal-content card">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="accion" value="editar">
+                <input type="hidden" name="usuario_id_edit" id="usuario_id_edit">
+                <input type="hidden" name="foto_actual" id="foto_actual_edit">
+
+                <div class="card-header">
+                    <h2 class="card-title">Editar Usuario</h2>
+                    <p class="card-description">Modifica los datos del usuario seleccionado.</p>
+                </div>
+                <div class="card-content">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tipo de usuario:</label>
+                            <select name="tipo_edit" id="tipo_edit" required onchange="mostrarCamposAdicionales('edicion')">
+                                <option value="administrador">Administrador</option>
+                                <option value="profesor">Profesor</option>
+                                <option value="preceptor">Preceptor</option>
+                                <option value="alumno">Alumno</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Apellidos:</label><input type="text" name="apellidos_edit" id="apellidos_edit" required></div>
+                        <div class="form-group"><label>Nombres:</label><input type="text" name="nombres_edit" id="nombres_edit" required></div>
+                        <div class="form-group"><label>DNI:</label><input type="text" name="dni_edit" id="dni_edit" required></div>
+                        <div class="form-group"><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento_edit" id="fecha_nacimiento_edit" required></div>
+                        <div class="form-group"><label>Celular:</label><input type="text" name="celular_edit" id="celular_edit"></div>
+                        <div class="form-group"><label>Domicilio:</label><input type="text" name="domicilio_edit" id="domicilio_edit"></div>
+                        <div class="form-group"><label>Contacto de emergencia:</label><input type="text" name="contacto_emergencia_edit" id="contacto_emergencia_edit"></div>
+
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Foto de perfil (dejar en blanco para no cambiar)</label>
+                            <div style="display:flex; align-items:center; gap:1rem;">
+                                <img id="preview_foto_edit" src="" alt="Foto actual" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">
+                                <input type="file" name="foto_usuario_edit" accept="image/*">
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="estado-form-group-edit">
+                            <label><input type="checkbox" name="activo_edit" id="activo_edit" value="1">Usuario Activo</label>
+                        </div>
+                        <div class="form-group" id="forzar-pass-form-group-edit">
+                            <label><input type="checkbox" name="debe_cambiar_password_edit" id="debe_cambiar_password_edit" value="1">Forzar cambio de contraseña</label>
+                        </div>
+                    </div>
+                    <div id="campos-alumno-edicion" class="tipo-fields">
+                        <h4>Datos del Alumno</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Legajo:</label><input type="text" name="legajo_alumno_edit" id="legajo_alumno_edit"></div>
+                            <div class="form-group"><label>Cohorte:</label><input type="number" name="cohorte_alumno_edit" id="cohorte_alumno_edit"></div>
+                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_alumno_edit" id="fecha_ingreso_alumno_edit"></div>
+                        </div>
+                    </div>
+                    <div id="campos-profesor-edicion" class="tipo-fields">
+                        <h4>Datos del Profesor</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_profesor_edit" id="titulo_profesional_profesor_edit"></div>
+                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_profesor_edit" id="fecha_ingreso_profesor_edit"></div>
+                            <div class="form-group" style="grid-column: 1 / -1;"><label>Horas de consulta:</label><textarea name="horas_consulta_profesor_edit" id="horas_consulta_profesor_edit" rows="2"></textarea></div>
+                        </div>
+                    </div>
+                    <div id="campos-preceptor-edicion" class="tipo-fields">
+                        <h4>Datos del Preceptor</h4>
+                        <div class="form-grid">
+                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_preceptor_edit" id="titulo_profesional_preceptor_edit"></div>
+                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_preceptor_edit" id="fecha_ingreso_preceptor_edit"></div>
+                            <div class="form-group"><label>Sector asignado:</label><input type="text" name="sector_asignado_preceptor_edit" id="sector_asignado_preceptor_edit"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-secondary" onclick="ocultarFormEdicion()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;"><i data-lucide="save"></i>Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
-</div>
-    </div>
-    <script>
-        let searchTimeout = null;
-        document.getElementById('searchUserInput').addEventListener('input', function(e) {
-            const searchTerm = e.target.value;
-            clearTimeout(searchTimeout); 
-            searchTimeout = setTimeout(() => {
-                fetch(`usuarios.php?action=search_users&term=${encodeURIComponent(searchTerm)}`, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest', 
-                    }
-                })
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('userTableBody').innerHTML = html;
-                })
-                .catch(error => console.error('Error en la búsqueda AJAX:', error));
-            }, 300); 
-        });
 
-        function mostrarCamposAdicionales() {
-            document.querySelectorAll('.tipo-fields').forEach(div => div.style.display = 'none'); 
-            const tipo = document.getElementById('tipo').value; 
-            if (tipo) { 
-                const camposEspecificos = document.getElementById('campos-' + tipo); 
-                if (camposEspecificos) { 
-                    camposEspecificos.style.display = 'block'; 
-                }
-            }
-        }
 
-        function populateEditForm(button) {
-            document.getElementById('formTitle').innerText = 'Editar Usuario';
-            document.getElementById('accion').value = 'editar';
-            document.getElementById('usuario_id_edit').value = button.dataset.usuario_id;
-            document.getElementById('tipo').value = button.dataset.tipo; 
-            document.getElementById('apellidos').value = button.dataset.apellidos; 
-            document.getElementById('nombres').value = button.dataset.nombres; 
-            document.getElementById('dni').value = button.dataset.dni; 
-            document.getElementById('fecha_nacimiento').value = button.dataset.fecha_nacimiento; 
-            document.getElementById('celular').value = button.dataset.celular; 
-            document.getElementById('domicilio').value = button.dataset.domicilio; 
-            document.getElementById('contacto_emergencia').value = button.dataset.contacto_emergencia; 
-            document.getElementById('estadoFormGroup').style.display = 'block';
-            document.getElementById('forzarCambioPassFormGroup').style.display = 'block';
-            document.getElementById('activo_estado').value = button.dataset.activo;
-            document.getElementById('debe_cambiar_password_edit').checked = (button.dataset.debe_cambiar_password == '1');
-            document.getElementById('legajo_alumno').value = button.dataset.legajo_alumno || ''; 
-            document.getElementById('cohorte_alumno').value = button.dataset.cohorte_alumno || ''; 
-            document.getElementById('fecha_ingreso_alumno').value = button.dataset.fecha_ingreso_alumno || ''; 
-            document.getElementById('titulo_profesional_profesor').value = button.dataset.titulo_profesional_profesor || ''; 
-            document.getElementById('fecha_ingreso_profesor').value = button.dataset.fecha_ingreso_profesor || ''; 
-            document.getElementById('horas_consulta_profesor').value = button.dataset.horas_consulta_profesor || ''; 
-            document.getElementById('titulo_profesional_preceptor').value = button.dataset.titulo_profesional_preceptor || ''; 
-            document.getElementById('fecha_ingreso_preceptor').value = button.dataset.fecha_ingreso_preceptor || ''; 
-            document.getElementById('sector_asignado_preceptor').value = button.dataset.sector_asignado_preceptor || ''; 
-            mostrarCamposAdicionales(); 
-            document.getElementById('submitButton').innerText = 'Guardar Cambios';
-            document.getElementById('submitButton').className = 'save'; 
-            document.getElementById('cancelEditButton').style.display = 'inline-block';
-            // Previsualizar foto actual
-            let foto = button.dataset.foto;
-            let src = foto ? 'uploads/' + foto : 'uploads/default.png';
-            document.getElementById('previewFoto').innerHTML = `<img src="${src}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
-            window.scrollTo(0, document.getElementById('formTitle').offsetTop);
-        }
-
-        function resetForm() {
-            document.getElementById('formTitle').innerText = 'Nuevo Usuario';
-            document.getElementById('userForm').reset(); 
-            document.getElementById('accion').value = 'crear';
-            document.getElementById('usuario_id_edit').value = '';
-            document.getElementById('activo_estado').value = '1'; 
-            document.getElementById('debe_cambiar_password_edit').checked = true; 
-            document.getElementById('estadoFormGroup').style.display = 'none';
-            document.getElementById('forzarCambioPassFormGroup').style.display = 'none';
-            mostrarCamposAdicionales(); 
-            document.getElementById('submitButton').innerText = 'Crear Usuario';
-            document.getElementById('submitButton').className = 'save';
-            document.getElementById('cancelEditButton').style.display = 'none';
-            document.getElementById('previewFoto').innerHTML = '';
-        }
-
-        document.getElementById('foto_usuario').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    document.getElementById('previewFoto').innerHTML = `<img src="${ev.target.result}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">`;
-                }
-                reader.readAsDataURL(file);
-            } else {
-                document.getElementById('previewFoto').innerHTML = '';
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            mostrarCamposAdicionales(); 
-            if (document.getElementById('accion').value === 'crear') {
-                document.getElementById('estadoFormGroup').style.display = 'none';
-                document.getElementById('forzarCambioPassFormGroup').style.display = 'none';
-                document.getElementById('debe_cambiar_password_edit').checked = true; 
-            }
-        });
-    </script>
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script>
         lucide.createIcons();
+
+        // --- MANEJO DEL SIDEBAR ---
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function confirmLogout() {
+            if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                window.location.href = 'logout.php';
+            }
+        }
+
+        // --- BÚSQUEDA AJAX ---
+        let searchTimeout = null;
+
+        function buscarUsuarios() {
+            clearTimeout(searchTimeout);
+            const searchTerm = document.getElementById('searchUserInput').value;
+            searchTimeout = setTimeout(() => {
+                fetch(`usuarios.php?action=search_users&term=${encodeURIComponent(searchTerm)}`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('userTableBody').innerHTML = html;
+                        lucide.createIcons(); // Vuelve a renderizar los iconos en los nuevos elementos
+                    })
+                    .catch(error => console.error('Error en la búsqueda AJAX:', error));
+            }, 300);
+        }
+
+        // --- MANEJO DE MODALES ---
+        const creacionModal = document.getElementById('creacionUsuarioModal');
+        const edicionModal = document.getElementById('edicionUsuarioModal');
+
+        function mostrarFormCreacion() {
+            creacionModal.style.display = 'flex';
+        }
+
+        function ocultarFormCreacion() {
+            creacionModal.style.display = 'none';
+        }
+
+        function mostrarFormEdicion() {
+            edicionModal.style.display = 'flex';
+        }
+
+        function ocultarFormEdicion() {
+            edicionModal.style.display = 'none';
+        }
+
+        // --- LÓGICA DE FORMULARIOS ---
+        function mostrarCamposAdicionales(contexto) { // 'creacion' o 'edicion'
+            document.querySelectorAll(`.tipo-fields`).forEach(div => div.style.display = 'none');
+            const tipo = document.getElementById(`tipo${contexto === 'edicion' ? '_edit' : ''}`).value;
+            if (tipo) {
+                const camposDiv = document.getElementById(`campos-${tipo}-${contexto}`);
+                if (camposDiv) {
+                    camposDiv.style.display = 'block';
+                }
+            }
+        }
+
+        function cargarDatosEdicion(usuario) {
+            // Rellenar datos generales
+            document.getElementById('usuario_id_edit').value = usuario.usuario_id;
+            document.getElementById('tipo_edit').value = usuario.tipo;
+            document.getElementById('apellidos_edit').value = usuario.apellidos;
+            document.getElementById('nombres_edit').value = usuario.nombres;
+            document.getElementById('dni_edit').value = usuario.dni;
+            document.getElementById('fecha_nacimiento_edit').value = usuario.fecha_nacimiento;
+            document.getElementById('celular_edit').value = usuario.celular || '';
+            document.getElementById('domicilio_edit').value = usuario.domicilio || '';
+            document.getElementById('contacto_emergencia_edit').value = usuario.contacto_emergencia || '';
+
+            // Estado y cambio de pass
+            document.getElementById('activo_edit').checked = (usuario.activo == '1');
+            document.getElementById('debe_cambiar_password_edit').checked = (usuario.debe_cambiar_password == '1');
+
+            // Foto
+            const fotoPreview = document.getElementById('preview_foto_edit');
+            document.getElementById('foto_actual_edit').value = usuario.foto || '';
+            fotoPreview.src = usuario.foto ? `../uploads/${usuario.foto}` : '../sources/default-user.png';
+
+            // Rellenar datos específicos del rol
+            document.getElementById('legajo_alumno_edit').value = usuario.legajo_alumno || '';
+            document.getElementById('cohorte_alumno_edit').value = usuario.cohorte_alumno || '';
+            document.getElementById('fecha_ingreso_alumno_edit').value = usuario.fecha_ingreso_alumno || '';
+
+            document.getElementById('titulo_profesional_profesor_edit').value = usuario.titulo_profesional_profesor || '';
+            document.getElementById('fecha_ingreso_profesor_edit').value = usuario.fecha_ingreso_profesor || '';
+            document.getElementById('horas_consulta_profesor_edit').value = usuario.horas_consulta_profesor || '';
+
+            document.getElementById('titulo_profesional_preceptor_edit').value = usuario.titulo_profesional_preceptor || '';
+            document.getElementById('fecha_ingreso_preceptor_edit').value = usuario.fecha_ingreso_preceptor || '';
+            document.getElementById('sector_asignado_preceptor_edit').value = usuario.sector_asignado_preceptor || '';
+
+            // Mostrar campos correctos y el modal
+            mostrarCamposAdicionales('edicion');
+            mostrarFormEdicion();
+        }
+
+        // Cierra los modales si se hace clic en el fondo oscuro
+        window.onclick = function(event) {
+            if (event.target == creacionModal) {
+                ocultarFormCreacion();
+            }
+            if (event.target == edicionModal) {
+                ocultarFormEdicion();
+            }
+        }
     </script>
 </body>
+
 </html>
 <?php
-if ($mysqli) { $mysqli->close(); }
+if (isset($mysqli)) {
+    $mysqli->close();
+}
 ?>

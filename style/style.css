@@ -293,18 +293,17 @@ body::after {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--gray-dark);
+    font-size: 0.95rem;
+    color: #888;
 }
 
 .breadcrumb a {
-    color: inherit;
+    color: var(--orange-primary);
     text-decoration: none;
-    transition: color 0.2s;
 }
 
 .breadcrumb a:hover {
-    color: var(--orange-primary);
+    text-decoration: underline;
 }
 
 .content {

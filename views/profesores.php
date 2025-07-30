@@ -311,6 +311,7 @@ if ($resultado_profesores) {
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -324,7 +325,7 @@ if ($resultado_profesores) {
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: url('fondo.png') no-repeat center center fixed;
@@ -333,7 +334,7 @@ if ($resultado_profesores) {
             line-height: 1.6;
             position: relative;
         }
-        
+
         body::after {
             content: '';
             position: fixed;
@@ -345,7 +346,7 @@ if ($resultado_profesores) {
             z-index: -1;
             pointer-events: none;
         }
-        
+
         /* Paleta de colores naranja */
         :root {
             --orange-primary: rgba(230, 92, 0, 0.9);
@@ -359,12 +360,12 @@ if ($resultado_profesores) {
             --gray-medium: rgba(224, 224, 224, 0.6);
             --gray-dark: rgba(51, 51, 51, 0.9);
         }
-        
+
         .app-container {
             display: flex;
             min-height: 100vh;
         }
-        
+
         /* Sidebar Styles */
         .sidebar {
             width: 280px;
@@ -381,12 +382,12 @@ if ($resultado_profesores) {
             transition: all 0.3s ease;
             z-index: 10;
         }
-        
+
         .sidebar-header {
             padding: 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .sidebar-brand {
             display: flex;
             align-items: center;
@@ -394,7 +395,7 @@ if ($resultado_profesores) {
             text-decoration: none;
             color: inherit;
         }
-        
+
         .brand-icon {
             width: 32px;
             height: 32px;
@@ -405,29 +406,29 @@ if ($resultado_profesores) {
             align-items: center;
             justify-content: center;
         }
-        
+
         .brand-text h1 {
             font-size: 1rem;
             font-weight: 600;
             margin: 0;
             color: var(--white);
         }
-        
+
         .brand-text p {
             font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.8);
             margin: 0;
         }
-        
+
         .sidebar-nav {
             flex: 1;
             padding: 1rem;
         }
-        
+
         .nav-section {
             margin-bottom: 2rem;
         }
-        
+
         .nav-label {
             font-size: 0.75rem;
             font-weight: 600;
@@ -437,15 +438,15 @@ if ($resultado_profesores) {
             margin-bottom: 0.5rem;
             padding: 0 0.75rem;
         }
-        
+
         .nav-menu {
             list-style: none;
         }
-        
+
         .nav-item {
             margin-bottom: 0.25rem;
         }
-        
+
         .nav-link {
             display: flex;
             align-items: center;
@@ -457,28 +458,28 @@ if ($resultado_profesores) {
             transition: all 0.3s;
             font-size: 0.875rem;
         }
-        
+
         .nav-link:hover {
             background: rgba(255, 255, 255, 0.15);
             color: var(--white);
         }
-        
+
         .nav-link.active {
             background: var(--white);
             color: var(--orange-primary);
             font-weight: 500;
         }
-        
+
         .nav-icon {
             width: 16px;
             height: 16px;
         }
-        
+
         .sidebar-footer {
             padding: 1rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .user-info {
             display: flex;
             align-items: center;
@@ -489,11 +490,11 @@ if ($resultado_profesores) {
             margin-bottom: 0.5rem;
             transition: all 0.3s;
         }
-        
+
         .user-info:hover {
             background: rgba(255, 255, 255, 0.2);
         }
-        
+
         .user-avatar {
             width: 32px;
             height: 32px;
@@ -506,20 +507,20 @@ if ($resultado_profesores) {
             font-weight: 600;
             font-size: 0.875rem;
         }
-        
+
         .user-details h3 {
             font-size: 0.875rem;
             font-weight: 500;
             margin: 0;
             color: var(--white);
         }
-        
+
         .user-details p {
             font-size: 0.75rem;
             color: rgba(255, 255, 255, 0.8);
             margin: 0;
         }
-        
+
         .logout-btn {
             display: flex;
             align-items: center;
@@ -535,11 +536,11 @@ if ($resultado_profesores) {
             width: 100%;
             cursor: pointer;
         }
-        
+
         .logout-btn:hover {
             background: rgba(255, 255, 255, 0.2);
         }
-        
+
         /* Main Content */
         .main-content {
             flex: 1;
@@ -548,7 +549,7 @@ if ($resultado_profesores) {
             min-height: 100vh;
             background: transparent;
         }
-        
+
         .header {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(8px);
@@ -562,11 +563,11 @@ if ($resultado_profesores) {
             z-index: 5;
             transition: all 0.3s;
         }
-        
+
         .header:hover {
             background: rgba(255, 255, 255, 0.85);
         }
-        
+
         .sidebar-toggle {
             display: none;
             background: none;
@@ -576,29 +577,28 @@ if ($resultado_profesores) {
             border-radius: 4px;
             color: var(--orange-primary);
         }
-        
+
         .sidebar-toggle:hover {
             background: var(--orange-lightest);
         }
-        
+
         .breadcrumb {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--gray-dark);
+            font-size: 0.95rem;
+            color: #888;
         }
-        
+
         .breadcrumb a {
-            color: inherit;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        
-        .breadcrumb a:hover {
             color: var(--orange-primary);
+            text-decoration: none;
         }
-        
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
         .content {
             flex: 1;
             padding: 1.5rem;
@@ -608,28 +608,28 @@ if ($resultado_profesores) {
             position: relative;
             z-index: 1;
         }
-        
+
         .page-header {
             margin-bottom: 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .page-title {
             font-size: 1.75rem;
             font-weight: 700;
             color: var(--gray-dark);
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        
+
         .page-subtitle {
             color: var(--gray-dark);
             opacity: 0.9;
             font-size: 1rem;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
-        
+
         /* Mensajes */
         .message-toast {
             padding: 1rem;
@@ -638,19 +638,19 @@ if ($resultado_profesores) {
             border: 1px solid transparent;
             backdrop-filter: blur(2px);
         }
-        
+
         .message-toast.success {
             background-color: rgba(220, 252, 231, 0.8);
             color: #166534;
             border-color: rgba(187, 247, 208, 0.6);
         }
-        
+
         .message-toast.error {
             background-color: rgba(254, 226, 226, 0.8);
             color: #991b1b;
             border-color: rgba(254, 202, 202, 0.6);
         }
-        
+
         /* Cards */
         .card {
             background: rgba(255, 255, 255, 0.7);
@@ -660,52 +660,52 @@ if ($resultado_profesores) {
             margin-bottom: 1.5rem;
             transition: all 0.3s;
         }
-        
+
         .card:hover {
             background: rgba(255, 255, 255, 0.85);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        
+
         .card-header {
             padding: 1rem 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
         }
-        
+
         .card-title {
             font-size: 1.125rem;
             font-weight: 600;
             color: var(--gray-dark);
         }
-        
+
         .card-description {
             font-size: 0.875rem;
             color: var(--gray-dark);
             opacity: 0.8;
             margin-top: 0.25rem;
         }
-        
+
         .card-content {
             padding: 1.5rem;
         }
-        
+
         .card-footer {
             padding: 1rem 1.5rem;
             border-top: 1px solid rgba(255, 255, 255, 0.3);
             background-color: rgba(255, 255, 255, 0.5);
             text-align: right;
         }
-        
+
         /* Formularios */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
         }
-        
+
         .form-group {
             margin-bottom: 1rem;
         }
-        
+
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
@@ -713,7 +713,7 @@ if ($resultado_profesores) {
             font-size: 0.875rem;
             color: var(--gray-dark);
         }
-        
+
         .form-group input[type="text"],
         .form-group input[type="date"],
         .form-group input[type="number"],
@@ -729,7 +729,7 @@ if ($resultado_profesores) {
             background-color: var(--white);
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-        
+
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
@@ -737,11 +737,11 @@ if ($resultado_profesores) {
             outline: none;
             box-shadow: 0 0 0 1px var(--orange-primary);
         }
-        
+
         .form-group textarea {
             min-height: 80px;
         }
-        
+
         /* Botones */
         .btn {
             display: inline-flex;
@@ -757,62 +757,62 @@ if ($resultado_profesores) {
             text-decoration: none;
             white-space: nowrap;
         }
-        
+
         .btn i {
             margin-right: 0.5rem;
             width: 16px;
             height: 16px;
         }
-        
+
         .btn-primary {
             background-color: var(--orange-primary);
             color: white;
         }
-        
+
         .btn-primary:hover {
             background-color: rgba(230, 92, 0, 1);
         }
-        
+
         .btn-secondary {
             background-color: var(--gray-light);
             color: var(--gray-dark);
             border-color: var(--gray-medium);
         }
-        
+
         .btn-secondary:hover {
             background-color: var(--gray-medium);
         }
-        
+
         .btn-danger {
             background-color: #dc2626;
             color: white;
         }
-        
+
         .btn-danger:hover {
             background-color: #b91c1c;
         }
-        
+
         .btn-outline {
             background-color: transparent;
             color: var(--gray-dark);
             border: 1px solid var(--gray-medium);
         }
-        
+
         .btn-outline:hover {
             background-color: var(--white-70);
         }
-        
+
         .btn-sm {
             padding: 0.375rem 0.75rem;
             font-size: 0.75rem;
         }
-        
+
         .btn-sm i {
             margin-right: 0.25rem;
             width: 14px;
             height: 14px;
         }
-        
+
         /* Tablas */
         .table-container {
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -821,12 +821,12 @@ if ($resultado_profesores) {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(5px);
         }
-        
+
         .styled-table {
             width: 100%;
             border-collapse: collapse;
         }
-        
+
         .styled-table th,
         .styled-table td {
             padding: 0.75rem 1rem;
@@ -834,27 +834,27 @@ if ($resultado_profesores) {
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
             font-size: 0.875rem;
         }
-        
+
         .styled-table th {
             background-color: rgba(255, 255, 255, 0.5);
             color: var(--gray-dark);
             font-weight: 600;
         }
-        
+
         .styled-table tr:last-child td {
             border-bottom: none;
         }
-        
+
         .styled-table tr:hover {
             background-color: rgba(255, 255, 255, 0.5);
         }
-        
+
         .table-actions {
             display: flex;
             gap: 0.5rem;
             justify-content: flex-end;
         }
-        
+
         /* Badges */
         .badge {
             display: inline-flex;
@@ -864,23 +864,23 @@ if ($resultado_profesores) {
             font-weight: 500;
             border-radius: 9999px;
         }
-        
+
         .badge i {
             width: 12px;
             height: 12px;
             margin-right: 0.25rem;
         }
-        
+
         .badge-success {
             background-color: rgba(220, 252, 231, 0.8);
             color: #15803d;
         }
-        
+
         .badge-danger {
             background-color: rgba(254, 226, 226, 0.8);
             color: #b91c1c;
         }
-        
+
         /* Modal */
         .modal-content {
             background: rgba(255, 255, 255, 0.9);
@@ -891,7 +891,7 @@ if ($resultado_profesores) {
             overflow-y: auto;
             backdrop-filter: blur(5px);
         }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -900,34 +900,34 @@ if ($resultado_profesores) {
                 transition: left 0.3s;
                 z-index: 1000;
             }
-            
+
             .sidebar.open {
                 left: 0;
             }
-            
+
             .sidebar-toggle {
                 display: block;
             }
-            
+
             .content {
                 padding: 1rem;
             }
-            
+
             .page-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 0.5rem;
             }
-            
+
             .form-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .modal-content {
                 max-width: calc(100% - 2rem);
             }
         }
-        
+
         .overlay {
             display: none;
             position: fixed;
@@ -938,16 +938,11 @@ if ($resultado_profesores) {
             background: rgba(0, 0, 0, 0.5);
             z-index: 999;
         }
-        
+
         .overlay.show {
             display: block;
         }
     </style>
-</head>
-<body>
-    <!-- [El resto del HTML permanece exactamente igual] -->
-</body>
-</html>
 </head>
 
 <body>
@@ -955,7 +950,7 @@ if ($resultado_profesores) {
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="../views/dashboard.php" class="sidebar-brand">
-                    <img src="../../ISEF/sources/logo.jpg" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
+                    <img src="../sources/logo_recortado.png" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
                     <div class="brand-text">
                         <h1>Sistema de Gestión ISEF</h1>
                         <p>Instituto Superior</p>
@@ -1023,11 +1018,11 @@ if ($resultado_profesores) {
                     <span>/</span>
                     <span>Profesores</span>
                 </nav>
-                <div class="header-actions">
+                <!-- <div class="header-actions">
                     <button class="icon-btn" title="Notificaciones">
                         <i data-lucide="bell"></i>
                     </button>
-                </div>
+                </div> -->
             </header>
 
             <div class="content">

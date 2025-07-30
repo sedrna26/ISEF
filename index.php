@@ -47,9 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
     }
     $stmt->close();
 }
-
-// Cerrar sesión si se viene del logout
-if (isset($_GET['logout'])) {
+// SOLO SI NO es un POST de login, verificamos si es un logout
+else if (isset($_GET['logout'])) {
     $_SESSION = [];
     session_destroy();
     $logout_message = "Sesión cerrada correctamente.";
@@ -90,7 +89,7 @@ $conn->close();
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: url('../ISEF-programadores-2/portada.png') no-repeat center center;
+            background: url('./sources/portada.png') no-repeat center center;
             background-size: cover;
             z-index: 1;
             transition: opacity 0.7s;
@@ -278,6 +277,7 @@ $conn->close();
     <div class="login-overlay" id="loginOverlay">
         <div class="login-container">
             <div class="header">
+                <img src="./sources/logo_recortado.png" alt="No Logo" style="width: 200px; height: 200px; margin-bottom: 20px;">
                 <h1>Sistema Académico ISEF</h1>
                 <p>Ingrese sus credenciales para acceder</p>
             </div>
@@ -309,18 +309,14 @@ $conn->close();
                 <button type="submit">Ingresar</button>
             </form>
 
-            <div class="info">
-                <strong>Primer ingreso:</strong>
-                Si es su primer acceso al sistema, su contraseña inicial es su número de DNI.
-                El sistema le solicitará cambiarla por seguridad.
-            </div>
+
         </div>
     </div>
 
     <script>
         // Mostrar login al hacer click en la portada
         let loginShown = false;
-        document.getElementById('portada').addEventListener('click', function () {
+        document.getElementById('portada').addEventListener('click', function() {
             if (!loginShown) {
                 document.getElementById('loginOverlay').classList.add('active');
                 document.getElementById('portada').style.opacity = '0.25';
@@ -329,12 +325,12 @@ $conn->close();
         });
 
         // Auto-ocultar mensaje de logout después de 3 segundos
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const logoutMessage = document.getElementById('logout-message');
             if (logoutMessage) {
-                setTimeout(function () {
+                setTimeout(function() {
                     logoutMessage.classList.add('fade-out');
-                    setTimeout(function () {
+                    setTimeout(function() {
                         logoutMessage.style.display = 'none';
                     }, 500);
                 }, 3000);
@@ -342,7 +338,7 @@ $conn->close();
         });
 
         // Permite abrir login con Enter en móvil
-        document.body.addEventListener('keydown', function (e) {
+        document.body.addEventListener('keydown', function(e) {
             if (!loginShown && (e.key === "Enter" || e.key === " " || e.key === "Spacebar")) {
                 document.getElementById('loginOverlay').classList.add('active');
                 document.getElementById('portada').style.opacity = '0.25';
