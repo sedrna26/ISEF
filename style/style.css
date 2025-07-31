@@ -252,7 +252,7 @@ body::after {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: url('../views/portada.png') center/cover no-repeat;
+    /* background: url('../views/portada.png') center/cover no-repeat; */
     background-attachment: fixed;
     position: relative;
 }
@@ -928,4 +928,425 @@ body::after {
 
 .overlay.show {
     display: block;
+}
+
+/* Estilos específicos para la página de materias */
+.materias .main-content {
+    /* padding: 0.05rem; */
+    background: var(--gray-bg);
+    min-height: 100vh;
+    overflow-x: auto;
+}
+
+.materias .card {
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+.materias .card-header {
+    background: #f5f5f5;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.materias .card-title {
+    font-size: 1.25rem;
+    margin: 0;
+    color: #333;
+}
+
+.materias .card-description {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+}
+
+.materias .card-content {
+    padding: 15px;
+}
+
+.materias .form-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.materias .form-col {
+    flex: 1;
+    min-width: 200px;
+}
+
+.materias .form-group {
+    margin-bottom: 15px;
+}
+
+.materias label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--orange-primary);
+}
+
+.materias input[type="text"],
+.materias input[type="number"],
+.materias select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    background-color: #fff;
+}
+
+.materias button {
+    padding: 10px 15px;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 5px;
+    font-weight: bold;
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.materias button.save {
+    background-color: var(--orange-primary);
+}
+
+.materias button.edit {
+    background-color: #ffa726;
+}
+
+.materias button.delete {
+    background-color: #ef5350;
+}
+
+.materias button.cancel {
+    background-color: #9e9e9e;
+}
+
+.materias button:hover {
+    opacity: 0.9;
+}
+
+.materias .actions-cell {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+.materias .actions-cell form {
+    display: inline;
+}
+
+.materias .styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+}
+
+.materias .styled-table th,
+.materias .styled-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-border);
+}
+
+.materias .styled-table th {
+    background-color: #ffe0b2;
+    color: #4e342e;
+}
+
+.materias .styled-table tr:hover {
+    background-color: #fff8e1;
+}
+
+@media (max-width: 900px) {
+    .materias .main-content {
+        margin-left: 0;
+        padding: 20px 5px;
+    }
+    .materias .sidebar {
+        position: fixed;
+        left: -280px;
+        transition: left 0.3s;
+    }
+    .materias .sidebar.open {
+        left: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .materias .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    .materias .form-col {
+        min-width: 100%;
+    }
+}
+
+/* Estilos específicos para la página de cursos */
+.cursos .main-content {
+    background: var(--gray-bg);
+    min-height: 100vh;
+    overflow-x: auto;
+   
+}
+
+.cursos .card {
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+.cursos .card-header {
+    background: #f5f5f5;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.cursos .card-title {
+    font-size: 1.25rem;
+    margin: 0;
+    color: #333;
+}
+
+.cursos .card-description {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+}
+
+.cursos .card-content {
+    padding: 15px;
+}
+
+.cursos .form-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.cursos .form-col {
+    flex: 1;
+    min-width: 200px;
+}
+
+.cursos .form-group {
+    margin-bottom: 15px;
+}
+
+.cursos label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--orange-primary);
+}
+
+.cursos input[type="text"],
+.cursos input[type="number"],
+.cursos select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    background-color: #fff;
+}
+
+.cursos button {
+    padding: 10px 15px;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 5px;
+    font-weight: bold;
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cursos button.save {
+    background-color: var(--orange-primary);
+}
+
+.cursos button.edit {
+    background-color: #ffa726;
+}
+
+.cursos button.delete {
+    background-color: #ef5350;
+}
+
+.cursos button.cancel {
+    background-color: #9e9e9e;
+}
+
+.cursos button:hover {
+    opacity: 0.9;
+}
+
+.cursos .actions-cell {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+.cursos .actions-cell form {
+    display: inline;
+}
+
+.cursos .styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+}
+
+.cursos .styled-table th,
+.cursos .styled-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-border);
+}
+
+.cursos .styled-table th {
+    background-color: #ffe0b2;
+    color: #4e342e;
+}
+
+.cursos .styled-table tr:hover {
+    background-color: #fff8e1;
+}
+
+@media (max-width: 900px) {
+    .cursos .main-content {
+        margin-left: 0;
+        padding: 20px 5px;
+    }
+    .cursos .sidebar {
+        position: fixed;
+        left: -280px;
+        transition: left 0.3s;
+    }
+    .cursos .sidebar.open {
+        left: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .cursos .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    .cursos .form-col {
+        min-width: 100%;
+    }
+}
+
+/* Estilos específicos para la página de auditoría */
+.auditoria .main-content {
+    background: var(--gray-bg);
+    min-height: 100vh;
+    overflow-x: auto;
+    padding: 1.5rem;
+}
+
+.auditoria .card {
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+.auditoria .card-header {
+    background: #f5f5f5;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.auditoria .card-title {
+    font-size: 1.25rem;
+    margin: 0;
+    color: #333;
+}
+
+.auditoria .card-description {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+}
+
+.auditoria .card-content {
+    padding: 15px;
+}
+
+.auditoria .table-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.auditoria .styled-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+}
+
+.auditoria .styled-table th,
+.auditoria .styled-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-border);
+    vertical-align: top;
+}
+
+.auditoria .styled-table th {
+    background-color: #ffe0b2;
+    color: #4e342e;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.auditoria .styled-table tr:hover {
+    background-color: #fff8e1;
+}
+
+.auditoria pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 0.95em;
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    .auditoria .main-content {
+        margin-left: 0;
+        padding: 20px 5px;
+    }
+    .auditoria .sidebar {
+        position: fixed;
+        left: -280px;
+        transition: left 0.3s;
+    }
+    .auditoria .sidebar.open {
+        left: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .auditoria .styled-table th,
+    .auditoria .styled-table td {
+        font-size: 0.85em;
+    }
 }
