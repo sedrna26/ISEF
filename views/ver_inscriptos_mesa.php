@@ -24,10 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['cambiar_estado'])) {
         $inscripcion_id = (int)$_POST['inscripcion_id'];
         $nuevo_estado = $_POST['nuevo_estado'];
-        
+
         $stmt = $mysqli->prepare("UPDATE inscripcion_examen SET estado = ? WHERE id = ?");
         $stmt->bind_param("si", $nuevo_estado, $inscripcion_id);
-        
+
         if ($stmt->execute()) {
             $mensaje_feedback = "Estado actualizado exitosamente.";
         } else {
@@ -35,10 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt->close();
     }
-    
+
     if (isset($_POST['eliminar_inscripcion'])) {
         $inscripcion_id = (int)$_POST['inscripcion_id'];
-        
+
         // Verificar que la mesa no esté cerrada
         $check_mesa = $mysqli->prepare("
             SELECT ae.cerrada 
@@ -51,13 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result_mesa = $check_mesa->get_result();
         $mesa_info = $result_mesa->fetch_assoc();
         $check_mesa->close();
-        
+
         if ($mesa_info && $mesa_info['cerrada']) {
             $mensaje_feedback = "Error: No se puede eliminar inscripciones de una mesa cerrada.";
         } else {
             $stmt = $mysqli->prepare("DELETE FROM inscripcion_examen WHERE id = ?");
             $stmt->bind_param("i", $inscripcion_id);
-            
+
             if ($stmt->execute()) {
                 $mensaje_feedback = "Inscripción eliminada exitosamente.";
             } else {
@@ -132,6 +132,7 @@ $inscriptos_result = $inscriptos_stmt->get_result();
 // Contar estadísticas
 $stats = [
     'total' => 0,
+    'inscripto' => 0,  // Agregar este estado
     'presente' => 0,
     'ausente' => 0
 ];
@@ -147,6 +148,7 @@ $inscriptos_stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Inscriptos de Mesa de Examen - ISEF</title>
@@ -220,10 +222,21 @@ $inscriptos_stmt->close();
             font-weight: bold;
         }
 
-        .stat-total { background-color: #6c757d; }
-        .stat-inscriptos { background-color: #007bff; }
-        .stat-presentes { background-color: #28a745; }
-        .stat-ausentes { background-color: #dc3545; }
+        .stat-total {
+            background-color: #6c757d;
+        }
+
+        .stat-inscriptos {
+            background-color: #007bff;
+        }
+
+        .stat-presentes {
+            background-color: #28a745;
+        }
+
+        .stat-ausentes {
+            background-color: #dc3545;
+        }
 
         table {
             width: 100%;
@@ -232,7 +245,8 @@ $inscriptos_stmt->close();
             font-size: 14px;
         }
 
-        th, td {
+        th,
+        td {
             border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
@@ -249,13 +263,34 @@ $inscriptos_stmt->close();
             background-color: #f9f9f9;
         }
 
-        .estado-inscripto { color: #007bff; font-weight: bold; }
-        .estado-presente { color: #28a745; font-weight: bold; }
-        .estado-ausente { color: #dc3545; font-weight: bold; }
+        .estado-inscripto {
+            color: #007bff;
+            font-weight: bold;
+        }
 
-        .nota-buena { color: #28a745; font-weight: bold; }
-        .nota-regular { color: #ffc107; font-weight: bold; }
-        .nota-mala { color: #dc3545; }
+        .estado-presente {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .estado-ausente {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .nota-buena {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .nota-regular {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .nota-mala {
+            color: #dc3545;
+        }
 
         .coloquio-aprobado {
             background-color: #d4edda;
@@ -272,7 +307,8 @@ $inscriptos_stmt->close();
             flex-wrap: wrap;
         }
 
-        .actions select, .actions button {
+        .actions select,
+        .actions button {
             padding: 4px 8px;
             font-size: 12px;
             border: 1px solid #ddd;
@@ -353,17 +389,19 @@ $inscriptos_stmt->close();
                 margin: 10px;
                 padding: 15px;
             }
-            
+
             table {
                 font-size: 12px;
             }
-            
-            th, td {
+
+            th,
+            td {
                 padding: 6px;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Inscriptos de Mesa de Examen</h1>
@@ -424,20 +462,20 @@ $inscriptos_stmt->close();
 
         <div class="stats-section">
             <h3>📊 Estadísticas de Inscripción</h3>
-           <div class="stats-grid">
-    <div class="stat-card stat-total">
-        <div style="font-size: 24px;"><?= $stats['total'] ?></div>
-        <div>Total Inscriptos</div>
-    </div>
-    <div class="stat-card stat-presentes">
-        <div style="font-size: 24px;"><?= $stats['presente'] ?></div>
-        <div>Presentes</div>
-    </div>
-    <div class="stat-card stat-ausentes">
-        <div style="font-size: 24px;"><?= $stats['ausente'] ?></div>
-        <div>Ausentes</div>
-    </div>
-</div>
+            <div class="stats-grid">
+                <div class="stat-card stat-total">
+                    <div style="font-size: 24px;"><?= $stats['total'] ?></div>
+                    <div>Total Inscriptos</div>
+                </div>
+                <div class="stat-card stat-presentes">
+                    <div style="font-size: 24px;"><?= $stats['presente'] ?></div>
+                    <div>Presentes</div>
+                </div>
+                <div class="stat-card stat-ausentes">
+                    <div style="font-size: 24px;"><?= $stats['ausente'] ?></div>
+                    <div>Ausentes</div>
+                </div>
+            </div>
         </div>
 
         <?php if (count($inscriptos_array) > 0): ?>
@@ -467,7 +505,7 @@ $inscriptos_stmt->close();
                             <td><?= htmlspecialchars($inscripto['legajo']) ?></td>
                             <td><?= htmlspecialchars($inscripto['alumno_nombre']) ?></td>
                             <td><?= htmlspecialchars($inscripto['dni']) ?></td>
-                            
+
                             <td><?= date('d/m/Y H:i', strtotime($inscripto['fecha_inscripcion'])) ?></td>
                             <td>
                                 <?php if ($inscripto['mejor_nota']): ?>
@@ -502,7 +540,7 @@ $inscriptos_stmt->close();
                                                 <option value="Ausente" <?= $inscripto['estado'] === 'Ausente' ? 'selected' : '' ?>>Ausente</option>
                                             </select>
                                         </form>
-                                        
+
                                         <form method="POST" style="display: inline;" onsubmit="return confirm('¿Está seguro de eliminar esta inscripción?')">
                                             <input type="hidden" name="eliminar_inscripcion" value="1">
                                             <input type="hidden" name="inscripcion_id" value="<?= $inscripto['inscripcion_id'] ?>">
@@ -527,9 +565,9 @@ $inscriptos_stmt->close();
         function exportToCSV() {
             const table = document.getElementById('inscriptosTable');
             const rows = Array.from(table.rows);
-            
+
             let csvContent = '';
-            
+
             // Headers (excluding actions column)
             const headers = rows[0].cells;
             const headerRow = [];
@@ -537,7 +575,7 @@ $inscriptos_stmt->close();
                 headerRow.push('"' + headers[i].textContent.trim() + '"');
             }
             csvContent += headerRow.join(',') + '\n';
-            
+
             // Data rows
             for (let i = 1; i < rows.length; i++) {
                 const cells = rows[i].cells;
@@ -549,9 +587,11 @@ $inscriptos_stmt->close();
                 }
                 csvContent += row.join(',') + '\n';
             }
-            
+
             // Download
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([csvContent], {
+                type: 'text/csv;charset=utf-8;'
+            });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
@@ -563,6 +603,7 @@ $inscriptos_stmt->close();
         }
     </script>
 </body>
+
 </html>
 
 <?php

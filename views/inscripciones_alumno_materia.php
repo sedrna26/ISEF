@@ -1,6 +1,6 @@
 <?php
-
-include '../tools/funciones_inscripcion.php';
+// Incluir funciones solo una vez
+include_once '../tools/funciones_inscripcion.php';
 
 if (!isset($_SESSION['usuario_id']) || $_SESSION['tipo'] !== 'alumno') {
     header("Location: ../index.php");
@@ -27,23 +27,132 @@ if (!isset($_SESSION['alumno_id_db'])) {
 $alumno_id = $_SESSION['alumno_id_db'];
 $ciclo_lectivo_actual = date("Y");
 
-// Obtener materias
+// Verificar si se envió el formulario de inscripción ANTES de mostrar el HTML
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $materia_id = isset($_POST['materia_id']) ? (int)$_POST['materia_id'] : 0;
+    $curso_id = isset($_POST['curso_id']) ? (int)$_POST['curso_id'] : 0;
+    $tipo_inscripcion = isset($_POST['tipo_inscripcion']) ? $_POST['tipo_inscripcion'] : '';
+
+    // DEBUG: Agregar estas líneas para verificar qué se está enviando
+    error_log("POST recibido - Materia ID: $materia_id, Curso ID: $curso_id, Tipo: $tipo_inscripcion");
+
+    // Obtener información de la materia
+    $stmt_materia = $mysqli->prepare("SELECT cuatrimestre, tipo, nombre FROM materia WHERE id = ?");
+    $stmt_materia->bind_param("i", $materia_id);
+    $stmt_materia->execute();
+    $materia_info = $stmt_materia->get_result()->fetch_assoc();
+    $stmt_materia->close();
+
+    if ($materia_id && $curso_id && $tipo_inscripcion && $materia_info) {
+        error_log("Procesando inscripción para materia: " . $materia_info['nombre']);
+
+        // Verificar período activo
+        $periodo_activo = verificar_periodo_inscripcion_activo(
+            $mysqli,
+            $materia_info['cuatrimestre'],
+            $ciclo_lectivo_actual
+        );
+
+        error_log("Período activo: " . ($periodo_activo ? 'SI' : 'NO'));
+
+        if ($periodo_activo) {
+            // Verificar si ya está inscripto
+            $ya_inscripto = alumno_ya_inscripto($mysqli, $alumno_id, $materia_id, $ciclo_lectivo_actual);
+
+            if (!$ya_inscripto) {
+                // CORRECCIÓN CRÍTICA: Usar 'estado' en lugar de 'condicion'
+                $estado_inscripcion = ($tipo_inscripcion === 'regular') ? 'Regular' : 'Libre';
+
+                $stmt = $mysqli->prepare("
+                    INSERT INTO inscripcion_cursado 
+                    (alumno_id, materia_id, curso_id, ciclo_lectivo, estado, fecha_inscripcion) 
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ");
+
+                try {
+                    $stmt->bind_param("iiiis", $alumno_id, $materia_id, $curso_id, $ciclo_lectivo_actual, $estado_inscripcion);
+
+                    error_log("Ejecutando query de inscripción con valores: $alumno_id, $materia_id, $curso_id, $ciclo_lectivo_actual, $estado_inscripcion");
+
+                    if ($stmt->execute()) {
+                        $_SESSION['mensaje'] = "Inscripción realizada con éxito en " . $materia_info['nombre'] . " como " . $estado_inscripcion;
+                        error_log("Inscripción exitosa");
+                    } else {
+                        throw new Exception("Error al ejecutar la consulta: " . $stmt->error);
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['error'] = "Error al procesar la inscripción: " . $e->getMessage();
+                    error_log("Error en inscripción: " . $e->getMessage());
+                }
+                $stmt->close();
+            } else {
+                $_SESSION['error'] = "Ya estás inscripto en esta materia.";
+                error_log("Alumno ya inscripto");
+            }
+        } else {
+            $_SESSION['error'] = "El período de inscripción no está activo para esta materia (" . $materia_info['cuatrimestre'] . ").";
+            error_log("Período no activo para cuatrimestre: " . $materia_info['cuatrimestre']);
+        }
+    } else {
+        $_SESSION['error'] = "Datos de inscripción incompletos.";
+        error_log("Datos incompletos - Materia info: " . print_r($materia_info, true));
+    }
+
+    // Redirigir para evitar reenvío del formulario
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
+
+// Obtener materias DESPUÉS del procesamiento
 $result_materias = $mysqli->query("SELECT * FROM materia ORDER BY anio, nro_orden");
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Inscripción a Materias - ISEF</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; color: #333; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; margin-bottom: 20px; }
-        h1 { font-size: 1.8em; }
-        h2 { font-size: 1.4em; }
-        a { color: #3498db; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.8em;
+        }
+
+        h2 {
+            font-size: 1.4em;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
 
         .nav-link {
             display: inline-block;
@@ -54,6 +163,7 @@ $result_materias = $mysqli->query("SELECT * FROM materia ORDER BY anio, nro_orde
             border-radius: 4px;
             font-size: 0.9em;
         }
+
         .nav-link:hover {
             background-color: #5a6268;
             text-decoration: none;
@@ -65,7 +175,7 @@ $result_materias = $mysqli->query("SELECT * FROM materia ORDER BY anio, nro_orde
             border: 1px solid #ddd;
             border-radius: 8px;
             background-color: #fdfdfd;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .materia-header {
@@ -213,100 +323,110 @@ $result_materias = $mysqli->query("SELECT * FROM materia ORDER BY anio, nro_orde
         }
     </style>
 </head>
+
 <body>
-<div class="container">
-    <h1>Inscripción a Materias - Ciclo Lectivo <?= $ciclo_lectivo_actual ?></h1>
-    <a href="dashboard.php" class="nav-link">&laquo; Volver al menú</a>
+    <div class="container">
+        <h1>Inscripción a Materias - Ciclo Lectivo <?= $ciclo_lectivo_actual ?></h1>
+        <a href="dashboard.php" class="nav-link">&laquo; Volver al menú</a>
 
-    <?php if ($result_materias->num_rows > 0): ?>
-        <?php while ($materia = $result_materias->fetch_assoc()): ?>
-            <div class="materia-card">
-                <div class="materia-header">
-                    <div class="materia-title"><?= htmlspecialchars($materia['nombre']) ?></div>
-                    <div class="materia-info">
-                        Año: <?= $materia['anio'] ?> | Cuatrimestre: <?= $materia['cuatrimestre'] ?>
-                    </div>
-                </div>
+        <?php if (isset($_SESSION['mensaje'])): ?>
+            <div class="status-message status-inscripto">
+                <?= htmlspecialchars($_SESSION['mensaje']) ?>
+            </div>
+            <?php unset($_SESSION['mensaje']); ?>
+        <?php endif; ?>
 
-                <?php if (alumno_ya_inscripto($mysqli, $alumno_id, $materia['id'], $ciclo_lectivo_actual)): ?>
-                    <div class="status-message status-inscripto">
-                        ✓ Ya estás inscripto/a en esta materia para el ciclo <?= $ciclo_lectivo_actual ?>.
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="status-message status-no-cursos">
+                <?= htmlspecialchars($_SESSION['error']) ?>
+            </div>
+            <?php unset($_SESSION['error']); ?>
+        <?php endif; ?>
+
+        <?php if ($result_materias->num_rows > 0): ?>
+            <?php while ($materia = $result_materias->fetch_assoc()): ?>
+                <div class="materia-card">
+                    <div class="materia-header">
+                        <div class="materia-title">
+                            <?= htmlspecialchars($materia['nombre']) ?>
+                        </div>
+                        <div class="materia-info">
+                            Año: <?= htmlspecialchars($materia['anio']) ?> |
+                            <?= htmlspecialchars($materia['tipo']) ?> |
+                            <?= htmlspecialchars($materia['cuatrimestre']) ?>
+                        </div>
                     </div>
-                <?php else: ?>
-                    <?php 
-                    $periodo_activo = verificar_periodo_inscripcion_activo($mysqli, $materia['cuatrimestre'], $ciclo_lectivo_actual);
-                    if ($periodo_activo): 
-                        $requisitos = verificar_requisitos_materia_alumno($mysqli, $alumno_id, $materia['id']);
-                        $cursos_disponibles = obtener_cursos_disponibles($mysqli, $materia['id'], $ciclo_lectivo_actual);
-                    ?>
-                        <?php if (empty($cursos_disponibles)): ?>
-                            <div class="status-message status-no-cursos">
-                                ⚠ No hay cursos (comisiones/turnos) definidos para esta materia en el ciclo lectivo actual.
+
+                    <?php
+                    // Verificar si el alumno ya está inscripto
+                    $ya_inscripto = alumno_ya_inscripto($mysqli, $alumno_id, $materia['id'], $ciclo_lectivo_actual);
+
+                    if ($ya_inscripto): ?>
+                        <div class="status-message status-inscripto">
+                            Ya estás inscripto/a en esta materia para el ciclo <?= $ciclo_lectivo_actual ?>.
+                        </div>
+                        <?php else:
+                        // Verificar perÃ­odo de inscripción
+                        $periodo_activo = verificar_periodo_inscripcion_activo($mysqli, $materia['cuatrimestre'], $ciclo_lectivo_actual);
+
+                        if (!$periodo_activo): ?>
+                            <div class="status-message status-periodo-inactivo">
+                                El perÃ­odo de inscripción para materias del <?= htmlspecialchars($materia['cuatrimestre']) ?> no está activo.
                             </div>
-                        <?php else: ?>
-                            <div class="form-inscripcion">
-                                <form action="procesar_inscripcion.php" method="POST">
+                            <?php else:
+                            // Obtener cursos disponibles
+                            $cursos_disponibles = obtener_cursos_disponibles($mysqli, $materia['id'], $ciclo_lectivo_actual);
+
+                            if ($cursos_disponibles && $cursos_disponibles->num_rows > 0): ?>
+                                <form method="POST" class="form-inscripcion">
                                     <input type="hidden" name="materia_id" value="<?= $materia['id'] ?>">
-                                    <input type="hidden" name="ciclo_lectivo" value="<?= $ciclo_lectivo_actual ?>">
+                                    <input type="hidden" name="tipo_inscripcion" id="tipo_inscripcion_<?= $materia['id'] ?>" value="regular">
 
                                     <div class="form-group">
-                                        <label for="curso_id_<?= $materia['id'] ?>">Seleccionar Curso/Comisión:</label>
-                                        <select name="curso_id" id="curso_id_<?= $materia['id'] ?>" required>
-                                            <option value="">-- Seleccione un curso --</option>
-                                            <?php foreach ($cursos_disponibles as $curso): ?>
-                                                <option value="<?= $curso['id'] ?>">
-                                                    <?= htmlspecialchars($curso['codigo'] . ' ' . $curso['division'] . ' - ' . $curso['turno']) ?>
-                                                </option>
-                                            <?php endforeach; ?>
+                                        <label for="curso_<?= $materia['id'] ?>">Seleccionar Comisión:</label>
+                                        <select name="curso_id" id="curso_<?= $materia['id'] ?>" required>
+                                            <option value="">Seleccione una comisión...</option>
+                                            <?php
+                                            // Reset del cursor para esta consulta específica
+                                            $cursos_disponibles = obtener_cursos_disponibles($mysqli, $materia['id'], $ciclo_lectivo_actual);
+                                            if ($cursos_disponibles && $cursos_disponibles->num_rows > 0):
+                                                while ($curso = $cursos_disponibles->fetch_assoc()):
+                                            ?>
+                                                    <option value="<?= $curso['id'] ?>">
+                                                        <?= htmlspecialchars($curso['codigo'] . ' ' . $curso['division'] . ' - ' . $curso['turno']) ?>
+                                                    </option>
+                                            <?php
+                                                endwhile;
+                                                $cursos_disponibles->free();
+                                            endif;
+                                            ?>
                                         </select>
                                     </div>
 
                                     <div class="button-group">
-                                        <?php if ($requisitos['puede_cursar_regular']): ?>
-                                            <button type="submit" name="tipo_inscripcion" value="Regular" class="btn-regular">
-                                                Inscribir Regular
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="button" disabled title="<?= htmlspecialchars($requisitos['mensaje_cursar_regular']) ?>" class="btn-regular">
-                                                Inscribir Regular (No cumple)
-                                            </button>
-                                        <?php endif; ?>
-
-                                        <?php if ($requisitos['puede_inscribir_libre']): ?>
-                                            <button type="submit" name="tipo_inscripcion" value="Libre" class="btn-libre">
-                                                Inscribir Libre
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="button" disabled title="<?= htmlspecialchars($requisitos['mensaje_inscribir_libre']) ?>" class="btn-libre">
-                                                Inscribir Libre (No cumple)
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
-
-                                    <div class="requisitos-info">
-                                        <div class="<?= $requisitos['puede_cursar_regular'] ? 'requisitos-cumple' : 'requisitos-no-cumple' ?>">
-                                            <strong>Regular:</strong> <?= htmlspecialchars($requisitos['mensaje_cursar_regular']) ?>
-                                        </div>
-                                        <div class="<?= $requisitos['puede_inscribir_libre'] ? 'requisitos-cumple' : 'requisitos-no-cumple' ?>">
-                                            <strong>Libre:</strong> <?= htmlspecialchars($requisitos['mensaje_inscribir_libre']) ?>
-                                        </div>
+                                        <button type="submit" class="btn-regular" onclick="document.getElementById('tipo_inscripcion_<?= $materia['id'] ?>').value='regular';">
+                                            Inscribirse como Regular
+                                        </button>
+                                        <button type="submit" class="btn-libre" onclick="document.getElementById('tipo_inscripcion_<?= $materia['id'] ?>').value='libre';">
+                                            Inscribirse como Libre
+                                        </button>
                                     </div>
                                 </form>
-                            </div>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <div class="status-message status-periodo-inactivo">
-                            ⏰ El período de inscripción para materias de este cuatrimestre no está activo.
-                        </div>
-                    <?php endif; ?>
-                <?php endif; ?>
+                            <?php else: ?>
+                                <div class="status-message status-no-cursos">
+                                    No hay comisiones disponibles para esta materia en este momento.
+                                </div>
+                    <?php endif;
+                        endif;
+                    endif; ?>
+                </div>
+            <?php endwhile; ?>
+        <?php else: ?>
+            <div class="no-materias">
+                <p>No hay materias disponibles para mostrar.</p>
             </div>
-        <?php endwhile; ?>
-    <?php else: ?>
-        <div class="no-materias">
-            <p>No hay materias cargadas en el sistema.</p>
-        </div>
-    <?php endif; ?>
-</div>
+        <?php endif; ?>
+    </div>
 </body>
+
 </html>
