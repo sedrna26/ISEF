@@ -7,7 +7,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: url('fondo.png') no-repeat center center fixed;
+    /* background: url('fondo.png') no-repeat center center fixed; */
     background-size: cover;
     color: #333333;
     line-height: 1.6;
@@ -1072,11 +1072,13 @@ body::after {
         margin-left: 0;
         padding: 20px 5px;
     }
+
     .materias .sidebar {
         position: fixed;
         left: -280px;
         transition: left 0.3s;
     }
+
     .materias .sidebar.open {
         left: 0;
     }
@@ -1087,6 +1089,7 @@ body::after {
         flex-direction: column;
         gap: 0;
     }
+
     .materias .form-col {
         min-width: 100%;
     }
@@ -1097,7 +1100,7 @@ body::after {
     background: var(--gray-bg);
     min-height: 100vh;
     overflow-x: auto;
-   
+
 }
 
 .cursos .card {
@@ -1234,11 +1237,13 @@ body::after {
         margin-left: 0;
         padding: 20px 5px;
     }
+
     .cursos .sidebar {
         position: fixed;
         left: -280px;
         transition: left 0.3s;
     }
+
     .cursos .sidebar.open {
         left: 0;
     }
@@ -1249,6 +1254,7 @@ body::after {
         flex-direction: column;
         gap: 0;
     }
+
     .cursos .form-col {
         min-width: 100%;
     }
@@ -1334,17 +1340,20 @@ body::after {
         margin-left: 0;
         padding: 20px 5px;
     }
+
     .auditoria .sidebar {
         position: fixed;
         left: -280px;
         transition: left 0.3s;
     }
+
     .auditoria .sidebar.open {
         left: 0;
     }
 }
 
 @media (max-width: 600px) {
+
     .auditoria .styled-table th,
     .auditoria .styled-table td {
         font-size: 0.85em;

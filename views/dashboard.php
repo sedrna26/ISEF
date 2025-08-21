@@ -47,6 +47,7 @@ $mysqli->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Sistema de Gestión ISEF</title>
+    <link rel="icon" href="../sources/logo_recortado.ico" type="image/x-icon">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="stylesheet" href="../style/style.css">
 
@@ -251,7 +252,7 @@ $mysqli->close();
                                 </div>
                             </a>
 
-                            <a href="situacion.php" class="menu-card">
+                            <a href="historial.php" class="menu-card">
                                 <div class="menu-card-header">
                                     <div class="menu-icon-wrapper">
                                         <i data-lucide="bar-chart-3" class="menu-icon"></i>

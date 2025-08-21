@@ -1,13 +1,13 @@
 <?php
 
-
 // Verificar si el usuario está autenticado
 $rol = $_SESSION['rol'] ?? 'invitado';
+
+// Obtener el nombre del archivo de la página actual para marcar el enlace activo
+$currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 
-<!-- Sidebar -->
 <aside class="sidebar" id="sidebar">
-    <!-- Header -->
     <div class="sidebar-header">
         <a href="../views/dashboard.php" class="sidebar-brand">
             <img src="../sources/logo_recortado.png" alt="No Logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
@@ -18,37 +18,35 @@ $rol = $_SESSION['rol'] ?? 'invitado';
         </a>
     </div>
 
-    <!-- Navigation -->
     <nav class="sidebar-nav">
         <div class="nav-section">
             <div class="nav-label">Navegación Principal</div>
             <ul class="nav-menu">
                 <li class="nav-item">
-                    <a href="../views/dashboard.php" class="nav-link active">
+                    <a href="../views/dashboard.php" class="nav-link <?php if ($currentPage == 'dashboard.php') echo 'active'; ?>">
                         <i data-lucide="home" class="nav-icon"></i>
                         <span>Inicio</span>
                     </a>
                 </li>
 
                 <?php if ($_SESSION['tipo'] === 'administrador'): ?>
-                    <li class="nav-item"><a href="../views/alumnos.php" class="nav-link"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
-                    <li class="nav-item"><a href="../views/profesores.php" class="nav-link"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
-                    <!-- <li class="nav-item"><a href="../views/inscripciones_alumno_materia.php" class="nav-link"><i data-lucide="user-plus" class="nav-icon"></i><span>Inscripciones</span></a></li> -->
-                    <li class="nav-item"><a href="../views/usuarios.php" class="nav-link"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
-                    <li class="nav-item"><a href="../views/materias.php" class="nav-link"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
-                    <li class="nav-item"><a href="../views/cursos.php" class="nav-link"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
-                    <li class="nav-item"><a href="../views/auditoria.php" class="nav-link"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
+                    <li class="nav-item"><a href="../views/alumnos.php" class="nav-link <?php if ($currentPage == 'alumnos.php') echo 'active'; ?>"><i data-lucide="graduation-cap" class="nav-icon"></i><span>Alumnos</span></a></li>
+                    <li class="nav-item"><a href="../views/profesores.php" class="nav-link <?php if ($currentPage == 'profesores.php') echo 'active'; ?>"><i data-lucide="briefcase" class="nav-icon"></i><span>Profesores</span></a></li>
+                    <li class="nav-item"><a href="../views/usuarios.php" class="nav-link <?php if ($currentPage == 'usuarios.php') echo 'active'; ?>"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
+                    <li class="nav-item"><a href="../views/materias.php" class="nav-link <?php if ($currentPage == 'materias.php') echo 'active'; ?>"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
+                    <li class="nav-item"><a href="../views/cursos.php" class="nav-link <?php if ($currentPage == 'cursos.php') echo 'active'; ?>"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
+                    <li class="nav-item"><a href="../views/auditoria.php" class="nav-link <?php if ($currentPage == 'auditoria.php') echo 'active'; ?>"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
                 <?php endif; ?>
 
                 <?php if ($_SESSION['tipo'] === 'profesor'): ?>
                     <li class="nav-item">
-                        <a href="../views/asistencias.php" class="nav-link">
+                        <a href="../views/asistencias.php" class="nav-link <?php if ($currentPage == 'asistencias.php') echo 'active'; ?>">
                             <i data-lucide="user-check" class="nav-icon"></i>
                             <span>Asistencias</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="../views/evaluaciones.php" class="nav-link">
+                        <a href="../views/evaluaciones.php" class="nav-link <?php if ($currentPage == 'evaluaciones.php') echo 'active'; ?>">
                             <i data-lucide="clipboard-check" class="nav-icon"></i>
                             <span>Evaluaciones</span>
                         </a>
@@ -57,19 +55,19 @@ $rol = $_SESSION['rol'] ?? 'invitado';
 
                 <?php if ($_SESSION['tipo'] === 'alumno'): ?>
                     <li class="nav-item">
-                        <a href="../views/inscripciones_alumno_materia.php" class="nav-link">
+                        <a href="../views/inscripciones_alumno_materia.php" class="nav-link <?php if ($currentPage == 'inscripciones_alumno_materia.php') echo 'active'; ?>">
                             <i data-lucide="user-plus" class="nav-icon"></i>
                             <span>Inscripciones</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="../views/desarrollo.php" class="nav-link">
+                        <a href="../views/historial.php" class="nav-link <?php if ($currentPage == 'desarrollo.php') echo 'active'; ?>">
                             <i data-lucide="bar-chart-3" class="nav-icon"></i>
                             <span>Situación Académica</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="../views/desarrollo.php" class="nav-link">
+                        <a href="../views/desarrollo.php" class="nav-link <?php if ($currentPage == 'desarrollo.php') echo 'active'; ?>">
                             <i data-lucide="file-text" class="nav-icon"></i>
                             <span>Certificados</span>
                         </a>
@@ -79,7 +77,6 @@ $rol = $_SESSION['rol'] ?? 'invitado';
         </div>
     </nav>
 
-    <!-- Footer -->
     <div class="sidebar-footer">
         <div class="user-info">
             <div class="user-avatar">

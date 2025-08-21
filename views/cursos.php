@@ -57,10 +57,10 @@ if ($stmt_user_sidebar) {
 <html lang="es">
 
 <head>
-   <meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Cursos - Sistema ISEF</title>
-    <link rel="icon" href="../sources/logoo.ico" type="image/x-icon">
+    <link rel="icon" href="../sources/logo_recortado.ico" type="image/x-icon">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="stylesheet" href="../style/style.css">
 </head>

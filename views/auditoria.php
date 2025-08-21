@@ -45,6 +45,7 @@ if ($stmt_user_sidebar) {
 <head>
     <meta charset="UTF-8">
     <title>Auditoría - ISEF</title>
+    <link rel="icon" href="../sources/logo_recortado.ico" type="image/x-icon">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="stylesheet" href="../style/style.css">
 </head>
@@ -54,13 +55,13 @@ if ($stmt_user_sidebar) {
         <?php include $_SERVER['DOCUMENT_ROOT'] . '/ISEF/views/includes/nav.php'; ?>
         <main class="main-content">
             <header class="header">
-                
+
                 <nav class="breadcrumb">
                     <a href="dashboard.php">Sistema de Gestión ISEF</a>
                     <span>/</span>
                     <span>Auditoría</span>
                 </nav>
-                
+
             </header>
             <div class="content">
                 <div class="card">
