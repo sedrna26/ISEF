@@ -37,6 +37,59 @@ $alumno_id = $_SESSION['alumno_id_db'];
     <link rel="icon" href="../sources/logo_recortado.ico" type="image/x-icon">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="stylesheet" href="../style/style.css">
+    <style>
+        /* Estilos específicos para la tabla del historial académico */
+        .historial-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--orange-lighter);
+        }
+
+        .historial-table th,
+        .historial-table td {
+            border: 1px solid var(--orange-lighter);
+            padding: 12px;
+            text-align: left;
+        }
+
+        .historial-table th {
+            background-color: var(--orange-lightest);
+            color: var(--gray-dark);
+            font-weight: 600;
+        }
+
+        .historial-table tr:hover {
+            background-color: rgba(255, 224, 204, 0.3);
+        }
+
+        .historial-table .notas-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .historial-table .notas-list li {
+            padding: 4px 0;
+            border-bottom: 1px dashed var(--orange-lighter);
+        }
+
+        .historial-table .notas-list li:last-child {
+            border-bottom: none;
+        }
+
+        .historial-table .fecha-nota {
+            font-size: 0.8em;
+            color: var(--gray-dark);
+            opacity: 0.7;
+        }
+
+        .historial-table .text-muted {
+            color: var(--gray-dark);
+            opacity: 0.6;
+            font-style: italic;
+        }
+    </style>
 </head>
 
 <body>
@@ -114,7 +167,7 @@ $alumno_id = $_SESSION['alumno_id_db'];
                             }
                         ?>
                             <div class="table-responsive">
-                                <table class="styled-table">
+                                <table class="styled-table historial-table">
                                     <thead>
                                         <tr>
                                             <th>Materia</th>

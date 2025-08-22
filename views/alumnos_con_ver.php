@@ -1,4 +1,4 @@
-<
+
 <?php
 // Mostrar detalle de alumno si se pasa ?ver=id
 if (isset($_GET['ver'])) {
@@ -27,8 +27,7 @@ if (isset($_GET['ver'])) {
         echo "<p style='color:red;'>Alumno no encontrado.</p>";
     }
 }
-?>
-?php
+
 // alumnos.php - Gestión integrada de alumnos (adaptado con diseño de dashboard)
 session_start();
 // 1. Verificación de sesión y tipo de usuario
