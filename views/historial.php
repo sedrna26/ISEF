@@ -33,6 +33,7 @@ $alumno_id = $_SESSION['alumno_id_db'];
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historial Académico</title>
     <link rel="icon" href="../sources/logo_recortado.ico" type="image/x-icon">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -94,7 +95,8 @@ $alumno_id = $_SESSION['alumno_id_db'];
 
 <body>
     <div class="app-container">
-        <?php include 'includes/nav.php'; ?>
+        <?php include_once 'includes/nav.php'; ?>
+        <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
         <main class="main-content">
             <header class="header">
                 <button class="sidebar-toggle" onclick="toggleSidebar()">
@@ -223,13 +225,35 @@ $alumno_id = $_SESSION['alumno_id_db'];
     </div>
 
     <script>
-        // Inicializar iconos
-        lucide.createIcons();
-
-        // Función para alternar la barra lateral
+        // Funciones para la UI del dashboard (sidebar, logout, etc.)
         function toggleSidebar() {
-            document.querySelector('.app-container').classList.toggle('collapsed');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
         }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        }
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                closeSidebar();
+            }
+        });
+
+        function confirmLogout() {
+            if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+                window.location.href = '../index.php?logout=1';
+            }
+        }
+
+        // Crear los íconos de Lucide
+        lucide.createIcons();
     </script>
 </body>
 

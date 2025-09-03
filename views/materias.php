@@ -136,15 +136,14 @@ if ($stmt_user_sidebar) {
                                 <div class="form-col">
                                     <div class="form-group"><label for="tipo">Tipo</label><select name="tipo" required>
                                             <option value="">Seleccione</option>
-                                            <option value="Troncal">Troncal</option>
-                                            <option value="Especialidad">Especialidad</option>
-                                            <option value="Electiva">Electiva</option>
+                                            <option value="Formación General">Formación General</option>
+                                            <option value="Formación Específica">Formación Específica</option>
                                         </select></div>
-                                    <div class="form-group"><label for="anio">Año</label><input type="number" name="anio" min="1" max="6" required></div>
+                                    <div class="form-group"><label for="anio">Año</label><input type="number" name="anio" required></div>
                                     <div class="form-group"><label for="cuatrimestre">Cuatrimestre</label><select name="cuatrimestre" required>
                                             <option value="">Seleccione</option>
-                                            <option value="1">1°</option>
-                                            <option value="2">2°</option>
+                                            <option value="Anual">Anual</option>
+                                            <option value="Cuatrimestral">Cuatrimestral</option>
                                         </select></div>
                                 </div>
                             </div>

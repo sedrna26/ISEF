@@ -35,6 +35,26 @@ $currentPage = basename($_SERVER['PHP_SELF']);
                     <li class="nav-item"><a href="../views/usuarios.php" class="nav-link <?php if ($currentPage == 'usuarios.php') echo 'active'; ?>"><i data-lucide="users" class="nav-icon"></i><span>Usuarios</span></a></li>
                     <li class="nav-item"><a href="../views/materias.php" class="nav-link <?php if ($currentPage == 'materias.php') echo 'active'; ?>"><i data-lucide="book-open" class="nav-icon"></i><span>Materias</span></a></li>
                     <li class="nav-item"><a href="../views/cursos.php" class="nav-link <?php if ($currentPage == 'cursos.php') echo 'active'; ?>"><i data-lucide="library" class="nav-icon"></i><span>Cursos</span></a></li>
+                    
+                    <li class="nav-item">
+                        <a href="../views/admin_periodos_inscripcion.php" class="nav-link <?php if ($currentPage == 'admin_periodos_inscripcion.php') echo 'active'; ?>">
+                            <i data-lucide="calendar-plus" class="nav-icon"></i>
+                            <span>Períodos de Inscripción</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../views/admin_periodos_examen.php" class="nav-link <?php if ($currentPage == 'admin_periodos_examen.php') echo 'active'; ?>">
+                            <i data-lucide="calendar-check" class="nav-icon"></i>
+                            <span>Períodos de Examen</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="../views/admin_inscripcion_manual.php" class="nav-link <?php if ($currentPage == 'admin_inscripcion_manual.php') echo 'active'; ?>">
+                            <i data-lucide="edit-3" class="nav-icon"></i>
+                            <span>Inscripción Manual</span>
+                        </a>
+                    </li>
+
                     <li class="nav-item"><a href="../views/auditoria.php" class="nav-link <?php if ($currentPage == 'auditoria.php') echo 'active'; ?>"><i data-lucide="clipboard-list" class="nav-icon"></i><span>Auditoría</span></a></li>
                 <?php endif; ?>
 
@@ -55,19 +75,22 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
                 <?php if ($_SESSION['tipo'] === 'alumno'): ?>
                     <li class="nav-item">
-                        <a href="../views/inscripciones_alumno_materia.php" class="nav-link <?php if ($currentPage == 'inscripciones_alumno_materia.php') echo 'active'; ?>">
+                        <a href="../views/inscripciones_alumno_materia.php"
+                            class="nav-link <?php if ($currentPage == 'inscripciones_alumno_materia.php') echo 'active'; ?>">
                             <i data-lucide="user-plus" class="nav-icon"></i>
                             <span>Inscripciones</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="../views/historial.php" class="nav-link <?php if ($currentPage == 'desarrollo.php') echo 'active'; ?>">
+                        <a href="../views/historial.php"
+                            class="nav-link <?php if ($currentPage == 'historial.php') echo 'active'; ?>">
                             <i data-lucide="bar-chart-3" class="nav-icon"></i>
                             <span>Situación Académica</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="../views/desarrollo.php" class="nav-link <?php if ($currentPage == 'desarrollo.php') echo 'active'; ?>">
+                        <a href="../views/desarrollo.php"
+                            class="nav-link <?php if ($currentPage == 'desarrollo.php') echo 'active'; ?>">
                             <i data-lucide="file-text" class="nav-icon"></i>
                             <span>Certificados</span>
                         </a>
@@ -80,10 +103,10 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div class="sidebar-footer">
         <div class="user-info">
             <div class="user-avatar">
-                <?= strtoupper(substr($usuario['nombre_completo'] ?? 'A', 0, 1)) ?>
+                <?= strtoupper(substr($usuario_sidebar['nombre_completo'] ?? 'A', 0, 1)) ?>
             </div>
             <div class="user-details">
-                <h3><?= htmlspecialchars($usuario['nombre_completo'] ?? 'Admin Usuario') ?></h3>
+                <h3><?= htmlspecialchars($usuario_sidebar['nombre_completo'] ?? 'Admin Usuario') ?></h3>
                 <p><?= htmlspecialchars($_SESSION['tipo']) ?>@isef.edu</p>
             </div>
         </div>

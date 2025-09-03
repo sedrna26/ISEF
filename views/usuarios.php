@@ -69,25 +69,24 @@ function generarFilaUsuarioHTML($usuario)
 }
 
 // --- Búsqueda por AJAX ---
-if (isset($_GET['action']) && $_GET['action'] === 'search_users' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+if (isset($_GET['action']) && $_GET['action'] === 'search_users') {
     $searchTerm = $mysqli->real_escape_string($_GET['term'] ?? '');
     $searchQuery = "
         SELECT 
             u.id AS usuario_id, u.username, u.tipo, u.activo, u.debe_cambiar_password,
-            p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento, p.celular, p.domicilio, p.contacto_emergencia, p.foto_url,
-            a.legajo AS legajo_alumno, a.cohorte AS cohorte_alumno, a.fecha_ingreso AS fecha_ingreso_alumno,
-            pr.titulo_profesional AS titulo_profesional_profesor, pr.fecha_ingreso AS fecha_ingreso_profesor, pr.horas_consulta AS horas_consulta_profesor,
-            pc.titulo_profesional AS titulo_profesional_preceptor, pc.fecha_ingreso AS fecha_ingreso_preceptor, pc.sector_asignado AS sector_asignado_preceptor
+            p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento,
+            p.celular, p.domicilio, p.contacto_emergencia, p.foto_url,
+            pc.titulo_profesional AS titulo_profesional_preceptor,
+            pc.fecha_ingreso AS fecha_ingreso_preceptor,
+            pc.sector_asignado AS sector_asignado_preceptor
         FROM usuario u
         LEFT JOIN persona p ON u.id = p.usuario_id
-        LEFT JOIN alumno a ON p.id = a.persona_id AND u.tipo = 'alumno'
-        LEFT JOIN profesor pr ON p.id = pr.persona_id AND u.tipo = 'profesor'
         LEFT JOIN preceptor pc ON p.id = pc.persona_id AND u.tipo = 'preceptor'
-        WHERE (p.apellidos LIKE '%$searchTerm%' OR 
-               p.nombres LIKE '%$searchTerm%' OR 
-               p.dni LIKE '%$searchTerm%' OR 
-               u.username LIKE '%$searchTerm%' OR 
-               a.legajo LIKE '%$searchTerm%')
+        WHERE u.tipo IN ('administrador', 'preceptor')
+        AND (p.apellidos LIKE '%$searchTerm%' OR 
+             p.nombres LIKE '%$searchTerm%' OR 
+             p.dni LIKE '%$searchTerm%' OR 
+             u.username LIKE '%$searchTerm%')
         ORDER BY u.tipo, p.apellidos, p.nombres
     ";
     $result = $mysqli->query($searchQuery);
@@ -332,15 +331,15 @@ if (isset($_SESSION['mensaje_error'])) {
 $usuarios_iniciales_sql = "
     SELECT 
         u.id AS usuario_id, u.username, u.tipo, u.activo, u.debe_cambiar_password,
-        p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento, p.celular, p.domicilio, p.contacto_emergencia, p.foto_url,
-        a.legajo AS legajo_alumno, a.cohorte AS cohorte_alumno, a.fecha_ingreso AS fecha_ingreso_alumno,
-        pr.titulo_profesional AS titulo_profesional_profesor, pr.fecha_ingreso AS fecha_ingreso_profesor, pr.horas_consulta AS horas_consulta_profesor,
-        pc.titulo_profesional AS titulo_profesional_preceptor, pc.fecha_ingreso AS fecha_ingreso_preceptor, pc.sector_asignado AS sector_asignado_preceptor
+        p.id AS persona_id, p.apellidos, p.nombres, p.dni, p.fecha_nacimiento, 
+        p.celular, p.domicilio, p.contacto_emergencia, p.foto_url,
+        pc.titulo_profesional AS titulo_profesional_preceptor, 
+        pc.fecha_ingreso AS fecha_ingreso_preceptor, 
+        pc.sector_asignado AS sector_asignado_preceptor
     FROM usuario u
     LEFT JOIN persona p ON u.id = p.usuario_id
-    LEFT JOIN alumno a ON p.id = a.persona_id AND u.tipo = 'alumno'
-    LEFT JOIN profesor pr ON p.id = pr.persona_id AND u.tipo = 'profesor'
     LEFT JOIN preceptor pc ON p.id = pc.persona_id AND u.tipo = 'preceptor'
+    WHERE u.tipo IN ('administrador', 'preceptor')
     ORDER BY u.tipo, p.apellidos, p.nombres
 ";
 $usuarios_result = $mysqli->query($usuarios_iniciales_sql);
@@ -389,11 +388,170 @@ $usuarios_result = $mysqli->query($usuarios_iniciales_sql);
                     <div class="message-toast error" role="alert"><?= htmlspecialchars($mensaje_error) ?></div>
                 <?php endif; ?>
 
+                <!-- Formulario de creación como card desplegable -->
+                <div class="card" id="creacionFormCard" style="display:none; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h2 class="card-title">Registrar Nuevo Usuario</h2>
+                        <p class="card-description">Completa los datos para agregar un nuevo usuario al sistema.</p>
+                    </div>
+                    <form method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="accion" value="crear">
+                        <div class="card-content">
+                            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                                <div class="form-group">
+                                    <label>Tipo de usuario:</label>
+                                    <select name="tipo" required onchange="mostrarCamposAdicionales('creacion')">
+                                        <option value="">Seleccione tipo</option>
+                                        <option value="administrador">Administrador</option>
+                                        <option value="preceptor">Preceptor</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Apellidos:</label>
+                                    <input type="text" name="apellidos" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nombres:</label>
+                                    <input type="text" name="nombres" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>DNI:</label>
+                                    <input type="text" name="dni" required pattern="\d{7,8}" title="DNI debe ser 7 u 8 dígitos numéricos">
+                                </div>
+                                <div class="form-group">
+                                    <label>Fecha de nacimiento:</label>
+                                    <input type="date" name="fecha_nacimiento" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Celular:</label>
+                                    <input type="text" name="celular">
+                                </div>
+                                <div class="form-group">
+                                    <label>Domicilio:</label>
+                                    <input type="text" name="domicilio">
+                                </div>
+                                <div class="form-group">
+                                    <label>Contacto de emergencia:</label>
+                                    <input type="text" name="contacto_emergencia">
+                                </div>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Foto de perfil:</label>
+                                    <div style="display:flex; align-items:center; gap:1rem;">
+                                        <input type="file" name="foto_usuario" accept="image/*" onchange="mostrarPreviewFoto(this)">
+                                        <div id="preview-foto" style="margin-top: 0.5rem;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Campos específicos por tipo de usuario -->
+                            <div id="campos-preceptor-creacion" class="tipo-fields">
+                                <h4>Datos del Preceptor</h4>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Título profesional:</label>
+                                        <input type="text" name="titulo_profesional_preceptor">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Fecha de ingreso:</label>
+                                        <input type="date" name="fecha_ingreso_preceptor">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Sector asignado:</label>
+                                        <input type="text" name="sector_asignado_preceptor">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button type="button" class="btn btn-secondary" onclick="ocultarFormCreacion()">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" style="margin-left:0.5rem;">
+                                <i data-lucide="save"></i>Crear Usuario
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Formulario de edición como card desplegable -->
+                <div class="card" id="edicionFormCard" style="display:none; margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h2 class="card-title">Editar Usuario</h2>
+                        <p class="card-description">Modifica la información del usuario seleccionado.</p>
+                    </div>
+                    <div class="card-content">
+                        <form method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="accion" value="editar">
+                            <input type="hidden" name="usuario_id_edit" id="usuario_id_edit">
+                            <input type="hidden" name="foto_actual" id="foto_actual_edit">
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Tipo de usuario:</label>
+                                    <select name="tipo_edit" id="tipo_edit" required onchange="mostrarCamposAdicionales('edicion')">
+                                        <option value="administrador">Administrador</option>
+                                        <option value="preceptor">Preceptor</option>
+                                    </select>
+                                </div>
+                                <div class="form-group"><label>Apellidos:</label><input type="text" name="apellidos_edit" id="apellidos_edit" required></div>
+                                <div class="form-group"><label>Nombres:</label><input type="text" name="nombres_edit" id="nombres_edit" required></div>
+                                <div class="form-group"><label>DNI:</label><input type="text" name="dni_edit" id="dni_edit" required></div>
+                                <div class="form-group"><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento_edit" id="fecha_nacimiento_edit" required></div>
+                                <div class="form-group"><label>Celular:</label><input type="text" name="celular_edit" id="celular_edit"></div>
+                                <div class="form-group"><label>Domicilio:</label><input type="text" name="domicilio_edit" id="domicilio_edit"></div>
+                                <div class="form-group"><label>Contacto de emergencia:</label><input type="text" name="contacto_emergencia_edit" id="contacto_emergencia_edit"></div>
+
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Foto de perfil (dejar en blanco para no cambiar)</label>
+                                    <div style="display:flex; align-items:center; gap:1rem;">
+                                        <img id="preview_foto_edit" src="" alt="Foto actual" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">
+                                        <input type="file" name="foto_usuario_edit" accept="image/*">
+                                    </div>
+                                </div>
+
+                                <div class="form-group" id="estado-form-group-edit">
+                                    <label><input type="checkbox" name="activo_edit" id="activo_edit" value="1">Usuario Activo</label>
+                                </div>
+                                <div class="form-group" id="forzar-pass-form-group-edit">
+                                    <label><input type="checkbox" name="debe_cambiar_password_edit" id="debe_cambiar_password_edit" value="1">Forzar cambio de contraseña</label>
+                                </div>
+                            </div>
+                            <div id="campos-preceptor-edicion" class="tipo-fields">
+                                <h4>Datos del Preceptor</h4>
+                                <div class="form-grid">
+                                    <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_preceptor_edit" id="titulo_profesional_preceptor_edit"></div>
+                                    <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_preceptor_edit" id="fecha_ingreso_preceptor_edit"></div>
+                                    <div class="form-group"><label>Sector asignado:</label><input type="text" name="sector_asignado_preceptor_edit" id="sector_asignado_preceptor_edit"></div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer">
+                        <button type="button" class="btn btn-secondary" onclick="ocultarFormEdicion()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;"><i data-lucide="save"></i>Guardar Cambios</button>
+                    </div>
+                </div>
+
+                <!-- Lista de usuarios -->
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">Lista de Usuarios</h2>
-                        <div class="form-group" style="margin-top: 1rem;">
-                            <input type="search" id="searchUserInput" onkeyup="buscarUsuarios()" placeholder="Buscar por Nombre, Apellido, DNI, Usuario, Legajo...">
+                        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-top: 1rem;">
+                            <div class="form-group" style="flex: 1 1 300px; margin-bottom: 0;">
+                                <input type="search"
+                                    id="searchUserInput"
+                                    onkeyup="filterTableUsers()"
+                                    placeholder="Buscar por Nombre, Apellido, DNI, Usuario..."
+                                    style="width: 100%; height: 2.5rem; padding: 0.625rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 0.875rem;">
+                            </div>
+                            <form method="get" style="margin-bottom: 0;">
+                                <label for="registros" style="font-size: 0.9rem; color: #64748b; margin-right: 0.5rem;">Mostrar</label>
+                                <select name="registros" id="registros" onchange="this.form.submit()"
+                                    style="padding: 0.4rem 0.7rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+                                    <option value="10">10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </form>
                         </div>
                     </div>
                     <div class="card-content" style="padding:0;">
@@ -411,15 +569,20 @@ $usuarios_result = $mysqli->query($usuarios_iniciales_sql);
                                     </tr>
                                 </thead>
                                 <tbody id="userTableBody">
-                                    <?php
-                                    if ($usuarios_result && $usuarios_result->num_rows > 0) {
-                                        while ($usuario = $usuarios_result->fetch_assoc()) {
-                                            echo generarFilaUsuarioHTML($usuario);
-                                        }
-                                    } else {
-                                        echo '<tr id="noUsersRow"><td colspan="7" style="text-align:center; padding: 2rem;">No hay usuarios registrados.</td></tr>';
-                                    }
-                                    ?>
+                                    <?php if ($usuarios_result && $usuarios_result->num_rows > 0): ?>
+                                        <?php while ($usuario = $usuarios_result->fetch_assoc()): ?>
+                                            <?php echo generarFilaUsuarioHTML($usuario); ?>
+                                        <?php endwhile; ?>
+                                    <?php else: ?>
+                                        <tr id="noUsersRow">
+                                            <td colspan="7" style="text-align:center; padding: 2rem;">No hay usuarios registrados.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                    <tr id="noResultsSearchRow" style="display: none;">
+                                        <td colspan="7" style="text-align:center; padding: 2rem;">
+                                            No se encontraron usuarios que coincidan con la búsqueda.
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -428,147 +591,6 @@ $usuarios_result = $mysqli->query($usuarios_iniciales_sql);
             </div>
         </main>
     </div>
-
-    <div id="creacionUsuarioModal" class="modal-container">
-        <div class="modal-content card">
-            <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="accion" value="crear">
-                <div class="card-header">
-                    <h2 class="card-title">Crear Nuevo Usuario</h2>
-                    <p class="card-description">El DNI se usará como contraseña inicial.</p>
-                </div>
-                <div class="card-content">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Tipo de usuario:</label>
-                            <select name="tipo" required onchange="mostrarCamposAdicionales('creacion')">
-                                <option value="">Seleccione tipo</option>
-                                <option value="administrador">Administrador</option>
-                                <option value="profesor">Profesor</option>
-                                <option value="preceptor">Preceptor</option>
-                                <option value="alumno">Alumno</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Apellidos:</label><input type="text" name="apellidos" required></div>
-                        <div class="form-group"><label>Nombres:</label><input type="text" name="nombres" required></div>
-                        <div class="form-group"><label>DNI:</label><input type="text" name="dni" required pattern="\d{7,8}"></div>
-                        <div class="form-group"><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento" required></div>
-                        <div class="form-group"><label>Celular:</label><input type="text" name="celular"></div>
-                        <div class="form-group"><label>Domicilio:</label><input type="text" name="domicilio"></div>
-                        <div class="form-group"><label>Contacto de emergencia:</label><input type="text" name="contacto_emergencia"></div>
-                        <div class="form-group"><label>Foto de perfil:</label><input type="file" name="foto_usuario" accept="image/*"></div>
-                    </div>
-                    <div id="campos-alumno-creacion" class="tipo-fields">
-                        <h4>Datos del Alumno</h4>
-                        <div class="form-grid">
-                            <div class="form-group"><label>Legajo:</label><input type="text" name="legajo_alumno"></div>
-                            <div class="form-group"><label>Cohorte:</label><input type="number" name="cohorte_alumno"></div>
-                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_alumno"></div>
-                        </div>
-                    </div>
-                    <div id="campos-profesor-creacion" class="tipo-fields">
-                        <h4>Datos del Profesor</h4>
-                        <div class="form-grid">
-                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_profesor"></div>
-                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_profesor"></div>
-                            <div class="form-group" style="grid-column: 1 / -1;"><label>Horas de consulta:</label><textarea name="horas_consulta_profesor" rows="2"></textarea></div>
-                        </div>
-                    </div>
-                    <div id="campos-preceptor-creacion" class="tipo-fields">
-                        <h4>Datos del Preceptor</h4>
-                        <div class="form-grid">
-                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_preceptor"></div>
-                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_preceptor"></div>
-                            <div class="form-group"><label>Sector asignado:</label><input type="text" name="sector_asignado_preceptor"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button type="button" class="btn btn-secondary" onclick="ocultarFormCreacion()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;"><i data-lucide="save"></i>Crear Usuario</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="edicionUsuarioModal" class="modal-container">
-        <div class="modal-content card">
-            <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="accion" value="editar">
-                <input type="hidden" name="usuario_id_edit" id="usuario_id_edit">
-                <input type="hidden" name="foto_actual" id="foto_actual_edit">
-
-                <div class="card-header">
-                    <h2 class="card-title">Editar Usuario</h2>
-                    <p class="card-description">Modifica los datos del usuario seleccionado.</p>
-                </div>
-                <div class="card-content">
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Tipo de usuario:</label>
-                            <select name="tipo_edit" id="tipo_edit" required onchange="mostrarCamposAdicionales('edicion')">
-                                <option value="administrador">Administrador</option>
-                                <option value="profesor">Profesor</option>
-                                <option value="preceptor">Preceptor</option>
-                                <option value="alumno">Alumno</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>Apellidos:</label><input type="text" name="apellidos_edit" id="apellidos_edit" required></div>
-                        <div class="form-group"><label>Nombres:</label><input type="text" name="nombres_edit" id="nombres_edit" required></div>
-                        <div class="form-group"><label>DNI:</label><input type="text" name="dni_edit" id="dni_edit" required></div>
-                        <div class="form-group"><label>Fecha de nacimiento:</label><input type="date" name="fecha_nacimiento_edit" id="fecha_nacimiento_edit" required></div>
-                        <div class="form-group"><label>Celular:</label><input type="text" name="celular_edit" id="celular_edit"></div>
-                        <div class="form-group"><label>Domicilio:</label><input type="text" name="domicilio_edit" id="domicilio_edit"></div>
-                        <div class="form-group"><label>Contacto de emergencia:</label><input type="text" name="contacto_emergencia_edit" id="contacto_emergencia_edit"></div>
-
-                        <div class="form-group" style="grid-column: 1 / -1;">
-                            <label>Foto de perfil (dejar en blanco para no cambiar)</label>
-                            <div style="display:flex; align-items:center; gap:1rem;">
-                                <img id="preview_foto_edit" src="" alt="Foto actual" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">
-                                <input type="file" name="foto_usuario_edit" accept="image/*">
-                            </div>
-                        </div>
-
-                        <div class="form-group" id="estado-form-group-edit">
-                            <label><input type="checkbox" name="activo_edit" id="activo_edit" value="1">Usuario Activo</label>
-                        </div>
-                        <div class="form-group" id="forzar-pass-form-group-edit">
-                            <label><input type="checkbox" name="debe_cambiar_password_edit" id="debe_cambiar_password_edit" value="1">Forzar cambio de contraseña</label>
-                        </div>
-                    </div>
-                    <div id="campos-alumno-edicion" class="tipo-fields">
-                        <h4>Datos del Alumno</h4>
-                        <div class="form-grid">
-                            <div class="form-group"><label>Legajo:</label><input type="text" name="legajo_alumno_edit" id="legajo_alumno_edit"></div>
-                            <div class="form-group"><label>Cohorte:</label><input type="number" name="cohorte_alumno_edit" id="cohorte_alumno_edit"></div>
-                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_alumno_edit" id="fecha_ingreso_alumno_edit"></div>
-                        </div>
-                    </div>
-                    <div id="campos-profesor-edicion" class="tipo-fields">
-                        <h4>Datos del Profesor</h4>
-                        <div class="form-grid">
-                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_profesor_edit" id="titulo_profesional_profesor_edit"></div>
-                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_profesor_edit" id="fecha_ingreso_profesor_edit"></div>
-                            <div class="form-group" style="grid-column: 1 / -1;"><label>Horas de consulta:</label><textarea name="horas_consulta_profesor_edit" id="horas_consulta_profesor_edit" rows="2"></textarea></div>
-                        </div>
-                    </div>
-                    <div id="campos-preceptor-edicion" class="tipo-fields">
-                        <h4>Datos del Preceptor</h4>
-                        <div class="form-grid">
-                            <div class="form-group"><label>Título profesional:</label><input type="text" name="titulo_profesional_preceptor_edit" id="titulo_profesional_preceptor_edit"></div>
-                            <div class="form-group"><label>Fecha de ingreso:</label><input type="date" name="fecha_ingreso_preceptor_edit" id="fecha_ingreso_preceptor_edit"></div>
-                            <div class="form-group"><label>Sector asignado:</label><input type="text" name="sector_asignado_preceptor_edit" id="sector_asignado_preceptor_edit"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer">
-                    <button type="button" class="btn btn-secondary" onclick="ocultarFormEdicion()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;"><i data-lucide="save"></i>Guardar Cambios</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
 
     <script>
         lucide.createIcons();
@@ -610,36 +632,31 @@ $usuarios_result = $mysqli->query($usuarios_iniciales_sql);
         const creacionModal = document.getElementById('creacionUsuarioModal');
         const edicionModal = document.getElementById('edicionUsuarioModal');
 
+        // Funciones para mostrar/ocultar formularios
         function mostrarFormCreacion() {
-            creacionModal.style.display = 'flex';
+            const formCard = document.getElementById('creacionFormCard');
+            formCard.style.display = 'block';
+            formCard.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
         }
 
         function ocultarFormCreacion() {
-            creacionModal.style.display = 'none';
-        }
-
-        function mostrarFormEdicion() {
-            edicionModal.style.display = 'flex';
-        }
-
-        function ocultarFormEdicion() {
-            edicionModal.style.display = 'none';
-        }
-
-        // --- LÓGICA DE FORMULARIOS ---
-        function mostrarCamposAdicionales(contexto) { // 'creacion' o 'edicion'
-            document.querySelectorAll(`.tipo-fields`).forEach(div => div.style.display = 'none');
-            const tipo = document.getElementById(`tipo${contexto === 'edicion' ? '_edit' : ''}`).value;
-            if (tipo) {
-                const camposDiv = document.getElementById(`campos-${tipo}-${contexto}`);
-                if (camposDiv) {
-                    camposDiv.style.display = 'block';
-                }
-            }
+            const formCard = document.getElementById('creacionFormCard');
+            formCard.style.display = 'none';
+            document.querySelector('#creacionFormCard form').reset();
         }
 
         function cargarDatosEdicion(usuario) {
-            // Rellenar datos generales
+            // Ocultar formulario de creación si está visible
+            ocultarFormCreacion();
+
+            // Mostrar formulario de edición
+            const formCard = document.getElementById('edicionFormCard');
+            formCard.style.display = 'block';
+
+            // Cargar datos en el formulario
             document.getElementById('usuario_id_edit').value = usuario.usuario_id;
             document.getElementById('tipo_edit').value = usuario.tipo;
             document.getElementById('apellidos_edit').value = usuario.apellidos;
@@ -684,6 +701,96 @@ $usuarios_result = $mysqli->query($usuarios_iniciales_sql);
             }
             if (event.target == edicionModal) {
                 ocultarFormEdicion();
+            }
+        }
+
+        // Agregar este script para la previsualización de la foto
+        function mostrarPreviewFoto(input) {
+            const previewDiv = document.getElementById('preview-foto');
+            previewDiv.innerHTML = '';
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewDiv.innerHTML = '<img src="' + e.target.result +
+                        '" alt="Foto seleccionada" style="max-width:180px;max-height:180px;border-radius:8px;border:1px solid #e2e8f0;">';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function mostrarCamposAdicionales(modo) {
+            // Ocultar todos los campos específicos
+            document.querySelectorAll('.tipo-fields').forEach(div => div.style.display = 'none');
+
+            const tipo = document.getElementById(modo === 'creacion' ? 'tipo' : 'tipo_edit').value;
+
+            // Mostrar solo los campos de preceptor si corresponde
+            if (tipo === 'preceptor') {
+                document.getElementById(`campos-preceptor-${modo}`).style.display = 'block';
+            }
+        }
+
+        function filterTableUsers() {
+            const input = document.getElementById("searchUserInput");
+            const filter = input.value.toLowerCase();
+            const table = document.querySelector(".styled-table");
+            const tbody = table.getElementsByTagName("tbody")[0];
+            const tr = tbody.getElementsByTagName("tr");
+            let foundMatch = false;
+
+            const noUsersRow = document.getElementById('noUsersRow');
+            const noResultsSearchRow = document.getElementById('noResultsSearchRow');
+
+            if (noUsersRow) noUsersRow.style.display = 'none';
+            if (noResultsSearchRow) noResultsSearchRow.style.display = 'none';
+
+            for (let i = 0; i < tr.length; i++) {
+                let row = tr[i];
+                if (row.id === 'noUsersRow' || row.id === 'noResultsSearchRow') {
+                    continue;
+                }
+                let displayRow = false;
+                const fotoTd = row.cells[0];
+                const tipoTd = row.cells[1];
+                const nombreTd = row.cells[2];
+                const dniTd = row.cells[3];
+                const usuarioTd = row.cells[4];
+                const estadoTd = row.cells[5];
+
+                if (tipoTd && nombreTd && dniTd && usuarioTd) {
+                    const tipoText = tipoTd.textContent || tipoTd.innerText;
+                    const nombreText = nombreTd.textContent || nombreTd.innerText;
+                    const dniText = dniTd.textContent || dniTd.innerText;
+                    const usuarioText = usuarioTd.textContent || usuarioTd.innerText;
+                    const estadoText = estadoTd ? (estadoTd.textContent || estadoTd.innerText) : '';
+
+                    if (tipoText.toLowerCase().indexOf(filter) > -1 ||
+                        nombreText.toLowerCase().indexOf(filter) > -1 ||
+                        dniText.toLowerCase().indexOf(filter) > -1 ||
+                        usuarioText.toLowerCase().indexOf(filter) > -1 ||
+                        estadoText.toLowerCase().indexOf(filter) > -1) {
+                        displayRow = true;
+                        foundMatch = true;
+                    }
+                }
+                row.style.display = displayRow ? "" : "none";
+            }
+
+            // Mostrar mensaje cuando no hay resultados
+            if (filter === "") {
+                if (tbody.rows.length === 0 && noUsersRow) {
+                    noUsersRow.style.display = '';
+                }
+                if (noResultsSearchRow) {
+                    noResultsSearchRow.style.display = 'none';
+                }
+            } else {
+                if (!foundMatch && noResultsSearchRow) {
+                    noResultsSearchRow.style.display = '';
+                }
+                if (noUsersRow) {
+                    noUsersRow.style.display = 'none';
+                }
             }
         }
     </script>

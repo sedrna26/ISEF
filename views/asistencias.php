@@ -1011,7 +1011,7 @@ if ($curso_id_seleccionado_preceptor) {
                         <h1 class="page-title">Gestión de Asistencias</h1>
                         <p class="page-subtitle">Seleccione los filtros para registrar o consultar las asistencias.</p>
                     </div>
-                    <a href="dashboard.php" class="btn btn-secondary"><i data-lucide="arrow-left" class="nav-icon"></i>Volver al menú</a>
+
                 </div>
 
                 <?php if ($mensaje_feedback): ?>
